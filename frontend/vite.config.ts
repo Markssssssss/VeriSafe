@@ -23,12 +23,24 @@ export default defineConfig({
     }
   },
   resolve: {
-    alias: {
-      // Alias keccak to wrapper for imports from other files
-      'keccak': path.resolve(__dirname, 'src/keccak-wrapper.js'),
-      // Fix for fetch-retry - point to wrapper
-      'fetch-retry': path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
-    },
+    alias: [
+      // Only alias 'keccak' when NOT importing from keccak-wrapper.js itself
+      {
+        find: /^keccak$/,
+        replacement: path.resolve(__dirname, 'src/keccak-wrapper.js'),
+        customResolver: (source, importer) => {
+          // If importing from keccak-wrapper.js, don't apply alias
+          if (importer && importer.includes('keccak-wrapper.js')) {
+            return null; // Let Vite resolve normally to node_modules
+          }
+          return path.resolve(__dirname, 'src/keccak-wrapper.js');
+        }
+      },
+      {
+        find: 'fetch-retry',
+        replacement: path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
+      }
+    ],
     // Ensure proper resolution of keccak package  
     conditions: ['browser', 'module', 'import', 'default']
   },
