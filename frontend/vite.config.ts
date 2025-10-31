@@ -9,16 +9,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(), 
+    react({
+      jsxRuntime: 'automatic'
+    }), 
     nodePolyfills()
   ],
   optimizeDeps: {
     exclude: ['@zama-fhe/relayer-sdk'],
-    include: ['keccak'],
+    include: ['keccak', 'react', 'react-dom'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
-      }
+      },
+      jsx: 'automatic'
     }
   },
   resolve: {
@@ -29,7 +32,7 @@ export default defineConfig({
       'fetch-retry': path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
     },
     // Ensure proper resolution of keccak package
-    conditions: ['browser', 'module', 'import']
+    conditions: ['browser', 'module', 'import', 'default']
   },
   define: {
     'global': 'globalThis'
@@ -42,7 +45,7 @@ export default defineConfig({
     target: 'es2022',
     commonjsOptions: {
       transformMixedEsModules: true,
-      include: [/fetch-retry/]
+      include: [/fetch-retry/, /react/, /react-dom/]
     },
     rollupOptions: {
       output: {

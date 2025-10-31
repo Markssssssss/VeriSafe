@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
 import { initSDK, createInstance, SepoliaConfig } from '@zama-fhe/relayer-sdk/web';
 import './App.css';
@@ -72,9 +72,9 @@ function App() {
   }, [view]);
   
   // Use useRef to persist provider and signer
-  const providerRef = React.useRef<ethers.BrowserProvider | null>(null);
-  const signerRef = React.useRef<ethers.JsonRpcSigner | null>(null);
-  const fhevmInstanceRef = React.useRef<any>(null); // FHEVM instance
+  const providerRef = useRef<ethers.BrowserProvider | null>(null);
+  const signerRef = useRef<ethers.JsonRpcSigner | null>(null);
+  const fhevmInstanceRef = useRef<any>(null); // FHEVM instance
 
   // Listen for wallet account and network changes
   useEffect(() => {
@@ -415,7 +415,7 @@ function App() {
   };
 
   // Ref for age input to add shake animation
-  const ageInputRef = React.useRef<HTMLInputElement>(null);
+  const ageInputRef = useRef<HTMLInputElement>(null);
 
   const verifyAge = async () => {
     if (!account || !signerRef.current) {
@@ -603,10 +603,12 @@ function App() {
           const isExactlyZero = resultHandle === "0x0000000000000000000000000000000000000000000000000000000000000000" || resultHandle === ethers.ZeroHash;
           console.log("Is handle exactly zero (FALSE)?", isExactlyZero);
           console.log("Should be TRUE (non-zero) if age >= 18, FALSE (zero) if age < 18");
-        } else {
+        } else if (resultHandle !== null && resultHandle !== undefined) {
           console.log("Handle is not a string, converting...");
           const handleAsHex = ethers.hexlify(resultHandle);
           console.log("Handle as hex string:", handleAsHex);
+        } else {
+          console.log("Handle is null or undefined, cannot decrypt");
         }
         
         // Decrypt using the relayer SDK
@@ -662,6 +664,9 @@ function App() {
             console.log("EIP712 signature obtained");
             
             // Convert resultHandle to the format expected by userDecrypt
+            if (!resultHandle) {
+              throw new Error("Result handle is null or undefined, cannot decrypt");
+            }
             const handleStr = typeof resultHandle === 'string' ? resultHandle : ethers.hexlify(resultHandle);
             
             // IMPORTANT: All addresses must be in checksum format (EIP-55)
