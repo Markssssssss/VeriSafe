@@ -46,16 +46,18 @@ export default defineConfig({
     target: 'es2022',
     commonjsOptions: {
       transformMixedEsModules: true,
-      include: [/fetch-retry/, /react/, /react-dom/, /keccak/],
+      include: [/fetch-retry/, /react/, /react-dom/, /keccak/, /@zama-fhe\/relayer-sdk/],
       // Enable default interop for CommonJS modules
       defaultIsModuleExports: true
     },
     rollupOptions: {
       output: {
         manualChunks: {
-          'relayer-sdk': ['@zama-fhe/relayer-sdk']
+          'relayer-sdk': ['@zama-fhe/relayer-sdk/web']
         }
-      }
+      },
+      // External handling for relayer-sdk
+      external: []
     }
   }
 })
