@@ -1,16 +1,23 @@
 // Wrapper for keccak module to provide default export
-// Import keccak directly - Vite's browser field resolution should use js.js
+// Fix for browser compatibility with CommonJS keccak module
 // @ts-ignore
-import keccakModule from 'keccak';
+// Import the actual keccak browser build using absolute path to bypass alias
+// Vite will transform CommonJS to ESM automatically
+import keccakFactory from '../node_modules/keccak/js.js';
 
-// keccak/js.js is CommonJS and returns a function (the hash creator)
-// The module.exports is the function itself that creates hash instances
-// We need to extract createHash if it exists, or use the module itself
+// keccak/js.js exports a factory function: module.exports = require('./lib/api')(require('./lib/keccak'))
+// In ESM context, this becomes a default export function
+// The function accepts algorithm and returns a hash instance
 
-// In browser, keccak/js.js exports a function that can be called to create hash instances
-// relayer-sdk expects: import createHash from 'keccak'
-// So we export the module as default
-export default keccakModule.default || keccakModule;
+// Create a wrapper that matches the expected interface
+function createHash(algorithm = 'keccak256') {
+  // keccakFactory is the function returned by lib/api/index.js
+  // It accepts (algorithm, options) and returns a hash instance
+  return keccakFactory(algorithm);
+}
 
-// Also export named export for compatibility
-export const createHash = keccakModule.default || keccakModule;
+// Export as default for compatibility with relayer-sdk
+export default createHash;
+
+// Also export named export
+export { createHash };

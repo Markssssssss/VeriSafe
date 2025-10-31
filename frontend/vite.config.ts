@@ -9,9 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      jsxRuntime: 'automatic'
-    }), 
+    react(), 
     nodePolyfills()
   ],
   optimizeDeps: {
@@ -26,13 +24,16 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Fix for keccak module - use wrapper that handles CommonJS properly
+      // Alias keccak to wrapper - but wrapper uses absolute path to bypass this alias
       'keccak': path.resolve(__dirname, 'src/keccak-wrapper.js'),
       // Fix for fetch-retry - point to wrapper
       'fetch-retry': path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
     },
     // Ensure proper resolution of keccak package
     conditions: ['browser', 'module', 'import', 'default']
+  },
+  ssr: {
+    noExternal: ['keccak']
   },
   define: {
     'global': 'globalThis'
