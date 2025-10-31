@@ -13,13 +13,17 @@ export default defineConfig({
     nodePolyfills()
   ],
   optimizeDeps: {
-    exclude: ['@zama-fhe/relayer-sdk'],
-    include: ['keccak/js.js', 'react', 'react-dom'],
+    // Don't exclude relayer-sdk - let Vite process it properly
+    include: ['@zama-fhe/relayer-sdk/web', 'keccak/js.js', 'react', 'react-dom'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
       },
-      jsx: 'automatic'
+      jsx: 'automatic',
+      // Ensure CommonJS modules are transformed
+      banner: {
+        js: 'var module = {}; var exports = {};'
+      }
     }
   },
   resolve: {
@@ -33,7 +37,7 @@ export default defineConfig({
     conditions: ['browser', 'module', 'import', 'default']
   },
   ssr: {
-    noExternal: ['keccak']
+    noExternal: ['keccak', '@zama-fhe/relayer-sdk']
   },
   define: {
     'global': 'globalThis'
@@ -64,8 +68,10 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].[hash].js',
         entryFileNames: 'assets/[name].[hash].js'
       },
-      // External handling for relayer-sdk
-      external: []
+      // Don't externalize relayer-sdk - it needs to be bundled
+      external: [],
+      // Plugin to handle CommonJS modules in relayer-sdk
+      plugins: []
     }
   }
 })

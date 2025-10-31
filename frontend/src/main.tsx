@@ -1,3 +1,9 @@
+// Polyfill for 'module' if not defined (for relayer-sdk compatibility)
+if (typeof module === 'undefined') {
+  // @ts-ignore
+  window.module = { exports: {} };
+}
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
