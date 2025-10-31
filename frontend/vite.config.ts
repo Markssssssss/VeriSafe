@@ -44,6 +44,10 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    // Ensure assets are referenced correctly
+    assetsDir: 'assets',
+    // Don't inline assets that are too large
+    assetsInlineLimit: 4096,
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/fetch-retry/, /react/, /react-dom/, /keccak/, /@zama-fhe\/relayer-sdk/],
@@ -54,7 +58,11 @@ export default defineConfig({
       output: {
         manualChunks: {
           'relayer-sdk': ['@zama-fhe/relayer-sdk/web']
-        }
+        },
+        // Ensure consistent asset naming
+        assetFileNames: 'assets/[name].[hash].[ext]',
+        chunkFileNames: 'assets/[name].[hash].js',
+        entryFileNames: 'assets/[name].[hash].js'
       },
       // External handling for relayer-sdk
       external: []
