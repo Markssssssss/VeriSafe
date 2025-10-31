@@ -53,9 +53,17 @@ const SEPOLIA_CHAIN_ID = 11155111;
 
 function App() {
   // Restore view state from localStorage, default to 'intro' if not found
+  // Use try-catch to handle cases where localStorage might not be available
   const [view, setView] = useState<'intro' | 'main'>(() => {
-    const savedView = localStorage.getItem('verisafe-view');
-    return (savedView === 'main' || savedView === 'intro') ? savedView : 'intro';
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedView = localStorage.getItem('verisafe-view');
+        return (savedView === 'main' || savedView === 'intro') ? savedView : 'intro';
+      }
+    } catch (e) {
+      console.warn('localStorage not available:', e);
+    }
+    return 'intro';
   });
   
   const [account, setAccount] = useState<string | null>(null);
