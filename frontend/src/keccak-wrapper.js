@@ -1,19 +1,29 @@
 // Wrapper for keccak module to provide default export
-// Fix for browser compatibility with CommonJS keccak module
-// @ts-ignore
-// Import the actual keccak browser build using absolute path to bypass alias
-// Vite will transform CommonJS to ESM automatically
-import keccakFactory from '../node_modules/keccak/js.js';
+// Import keccak CommonJS module using node_modules path to bypass alias
+// @ts-ignore  
+import keccakModule from '../node_modules/keccak/js.js';
 
-// keccak/js.js exports a factory function: module.exports = require('./lib/api')(require('./lib/keccak'))
-// In ESM context, this becomes a default export function
-// The function accepts algorithm and returns a hash instance
+// keccak/js.js is CommonJS: module.exports = require('./lib/api')(require('./lib/keccak'))
+// The module.exports becomes the default export after Vite transformation
+
+// Extract the factory function
+// In Vite, CommonJS default exports are available as default property
+// If default doesn't exist, the module itself might be the export
+const keccakFactory = (keccakModule && typeof keccakModule === 'object' && 'default' in keccakModule)
+  ? keccakModule.default 
+  : keccakModule;
 
 // Create a wrapper that matches the expected interface
 function createHash(algorithm = 'keccak256') {
-  // keccakFactory is the function returned by lib/api/index.js
-  // It accepts (algorithm, options) and returns a hash instance
-  return keccakFactory(algorithm);
+  // Handle both function and object with default property
+  const factory = typeof keccakFactory === 'function' 
+    ? keccakFactory 
+    : (keccakFactory.default || keccakFactory);
+    
+  if (typeof factory === 'function') {
+    return factory(algorithm);
+  }
+  throw new Error('Keccak factory function not found');
 }
 
 // Export as default for compatibility with relayer-sdk

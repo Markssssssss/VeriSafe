@@ -14,7 +14,7 @@ export default defineConfig({
   ],
   optimizeDeps: {
     exclude: ['@zama-fhe/relayer-sdk'],
-    include: ['keccak', 'react', 'react-dom'],
+    include: ['keccak/js.js', 'react', 'react-dom'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
@@ -24,12 +24,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Alias keccak to wrapper - but wrapper uses absolute path to bypass this alias
+      // Alias keccak to wrapper for imports from other files
       'keccak': path.resolve(__dirname, 'src/keccak-wrapper.js'),
       // Fix for fetch-retry - point to wrapper
       'fetch-retry': path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
     },
-    // Ensure proper resolution of keccak package
+    // Ensure proper resolution of keccak package  
     conditions: ['browser', 'module', 'import', 'default']
   },
   ssr: {
@@ -46,7 +46,9 @@ export default defineConfig({
     target: 'es2022',
     commonjsOptions: {
       transformMixedEsModules: true,
-      include: [/fetch-retry/, /react/, /react-dom/]
+      include: [/fetch-retry/, /react/, /react-dom/, /keccak/],
+      // Enable default interop for CommonJS modules
+      defaultIsModuleExports: true
     },
     rollupOptions: {
       output: {
