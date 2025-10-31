@@ -605,7 +605,8 @@ function App() {
           console.log("Should be TRUE (non-zero) if age >= 18, FALSE (zero) if age < 18");
         } else if (resultHandle !== null && resultHandle !== undefined) {
           console.log("Handle is not a string, converting...");
-          const handleAsHex = ethers.hexlify(resultHandle);
+          // TypeScript type guard: resultHandle is not null at this point
+          const handleAsHex = ethers.hexlify(resultHandle as Uint8Array | string);
           console.log("Handle as hex string:", handleAsHex);
         } else {
           console.log("Handle is null or undefined, cannot decrypt");
@@ -667,7 +668,10 @@ function App() {
             if (!resultHandle) {
               throw new Error("Result handle is null or undefined, cannot decrypt");
             }
-            const handleStr = typeof resultHandle === 'string' ? resultHandle : ethers.hexlify(resultHandle);
+            // TypeScript type guard: resultHandle is not null at this point
+            const handleStr = typeof resultHandle === 'string' 
+              ? resultHandle 
+              : ethers.hexlify(resultHandle as Uint8Array);
             
             // IMPORTANT: All addresses must be in checksum format (EIP-55)
             // ethers.getAddress() ensures correct checksum format
