@@ -4,7 +4,9 @@ A decentralized dApp built on **Zama FHEVM** protocol that enables users to veri
 
 ## 🌟 Overview
 
-**VeriSafe** is a privacy-first age verification system deployed on Sepolia Testnet. It allows users to prove they meet age requirements (18+ years) without exposing their actual age value. The entire verification process uses FHE technology, ensuring that sensitive personal data remains encrypted throughout the computation.
+**VeriSafe** is a privacy-first age verification system deployed on Sepolia Testnet. Inspired by the privacy risks faced during rental and property purchase processes, where sensitive personal information such as age, income, and credit scores are often unnecessarily exposed to intermediaries and agencies, VeriSafe addresses this fundamental privacy concern.
+
+The project was conceived to protect users' personal data while still allowing verification of eligibility thresholds. It allows users to prove they meet age requirements (18+ years) without exposing their actual age value. The entire verification process uses FHE technology, ensuring that sensitive personal data remains encrypted throughout the computation.
 
 ### Core Value Proposition
 
@@ -307,63 +309,11 @@ The frontend will automatically open in your browser at `http://localhost:5173`
 
 ### 🎮 Usage Guide
 
-#### Step-by-Step User Flow
-
-1. **Open the Application**
-   - Navigate to `http://localhost:5173` (or the URL shown in terminal)
-   - You'll see the VeriSafe welcome page
-
-2. **Click "Start Verification"**
-   - This takes you to the main verification interface
-
-3. **Connect Your Wallet**
-   - Click "Connect Wallet" button
-   - MetaMask will pop up asking for connection permission
-   - **Important**: Ensure MetaMask is set to **Sepolia Testnet**
-     - If not, the app will prompt you to switch networks
-
-4. **Enter Your Age**
-   - Input a valid age (integer between 1-150)
-   - Invalid inputs (decimals, zero, negatives) will trigger a shake animation
-
-5. **Click "Verify Age"**
-   - Frontend encrypts your age using FHE
-   - MetaMask opens asking you to confirm the transaction
-   - **Transaction Details**:
-     - Function: `verifyAge`
-     - Gas Estimate: ~215,000 (FHE operations are computation-intensive)
-     - Confirm the transaction
-
-6. **Wait for Transaction Confirmation**
-   - Wait ~15-30 seconds for transaction to be mined
-   - You'll see "Waiting for transaction..." in the UI
-
-7. **Sign EIP-712 Permission Request**
-   - MetaMask will open again asking for a signature
-   - This is for decryption permission (EIP-712 typed data)
-   - Click "Sign" to authorize decryption
-
-8. **View Verification Result**
-   - The UI will display:
-     - ✅ **"Qualified (Age 18+)"** if age >= 18
-     - ❌ **"Not Qualified (Under 18)"** if age < 18
-
-#### Troubleshooting
-
-**Problem**: "Please connect your wallet first"
-- **Solution**: Ensure MetaMask is installed and unlocked
-
-**Problem**: "Please switch to Sepolia Testnet"
-- **Solution**: Click MetaMask network dropdown → Select "Sepolia"
-
-**Problem**: Transaction fails with "insufficient funds"
-- **Solution**: Get Sepolia ETH from a faucet (see below)
-
-**Problem**: "FHEVM is not initialized"
-- **Solution**: Refresh the page and reconnect wallet
-
-**Problem**: Decryption fails
-- **Solution**: Ensure you signed the EIP-712 permission request
+1. **Connect Wallet** - Click "Connect Wallet" and ensure MetaMask is on Sepolia Testnet
+2. **Enter Age** - Input your age (integer 1-150)
+3. **Verify** - Click "Verify Age" and confirm transaction in MetaMask
+4. **Sign Permission** - Sign EIP-712 permission request for decryption
+5. **View Result** - See verification result (Qualified/Not Qualified)
 
 ---
 
@@ -387,80 +337,6 @@ You need Sepolia ETH to pay for gas fees. Get free testnet ETH from:
    - Receive testnet ETH
 
 **Note**: Most faucets have rate limits (usually 24 hours). If one doesn't work, try another.
-
----
-
-## 🌐 Deployment to Production
-
-### Deploy Frontend to Vercel
-
-#### Method 1: Vercel CLI (Recommended)
-
-```bash
-# Install Vercel CLI globally
-npm i -g vercel
-
-# Navigate to frontend directory
-cd frontend
-
-# Login to Vercel
-vercel login
-
-# Deploy
-vercel
-
-# Follow prompts:
-# - Link to existing project? N
-# - Project name: verisafe (or your choice)
-# - Directory: ./ (current directory)
-```
-
-After deployment, Vercel will provide:
-- Production URL: `https://verisafe.vercel.app`
-- Preview URLs for each deployment
-
-#### Method 2: Vercel Dashboard
-
-1. **Push code to GitHub** (if not already)
-   ```bash
-   git add .
-   git commit -m "Ready for deployment"
-   git push origin main
-   ```
-
-2. **Import to Vercel**
-   - Visit: https://vercel.com/new
-   - Click "Import Git Repository"
-   - Select your GitHub repository
-   - **Important Configuration**:
-     - Framework Preset: `Vite`
-     - Root Directory: `frontend` ⚠️
-     - Build Command: `npm run build` (auto-detected)
-     - Output Directory: `dist` (auto-detected)
-   - Click "Deploy"
-
-3. **Wait for deployment** (~2-5 minutes)
-
-4. **Access your live app**
-   - Vercel provides: `https://your-project.vercel.app`
-
-#### Update Contract Address for Production
-
-If using the existing deployed contract, it's already configured. If you deployed a new contract:
-
-1. Update `frontend/src/App.tsx` line 7:
-   ```typescript
-   const CONTRACT_ADDRESS = "YOUR_DEPLOYED_ADDRESS";
-   ```
-
-2. Commit and push:
-   ```bash
-   git add frontend/src/App.tsx
-   git commit -m "Update contract address"
-   git push origin main
-   ```
-
-3. Vercel will automatically redeploy
 
 ---
 

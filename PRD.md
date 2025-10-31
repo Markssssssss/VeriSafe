@@ -11,7 +11,9 @@
 
 **VeriSafe** is a decentralized privacy-preserving verification tool built on the **Zama FHEVM** protocol. Our vision is to establish a new standard for qualification verification in the digital world, enabling users to securely and instantly prove they meet specific requirements **without exposing any sensitive personal data**.
 
-For this MVP, **VeriSafe** focuses on verifying whether users meet the **legal age requirement** for signing rental contracts. Our core philosophy: **"Verify Safely, Remain Private"**.
+**VeriSafe** was inspired by the privacy risks faced during rental and property purchase processes. When applying for rentals or loans, users are often required to submit sensitive personal information—such as exact age, annual income, and credit scores—to intermediaries, platforms, or agencies. This information is frequently over-collected (when only a simple yes/no eligibility check is needed) and poses significant privacy and security risks due to opaque storage and usage practices.
+
+For this MVP, **VeriSafe** focuses on verifying whether users meet the **legal age requirement** (18+ years) for signing rental contracts. Our core philosophy: **"Verify Safely, Remain Private"**—allowing eligibility verification without exposing actual personal data values.
 
 ---
 
