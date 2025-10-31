@@ -1,106 +1,106 @@
-# FHE技术使用总结 - VeriSafe项目
+# FHE Technology Usage Summary - VeriSafe Project
 
-## 📍 FHE技术使用位置
+## 📍 FHE Technology Usage Locations
 
-### 1. **智能合约层（VeriSafe.sol）**
+### 1. **Smart Contract Layer (VeriSafe.sol)**
 
-#### 1.1 导入FHE库
+#### 1.1 Import FHE Libraries
 ```solidity
 import {FHE, euint32, ebool, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
 import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 ```
-**验证方法：** 查看 `contracts/VeriSafe.sol` 第4-5行
+**Verification Method:** Check `contracts/VeriSafe.sol` lines 4-5
 
-#### 1.2 使用加密数据类型
-- **`externalEuint32`**: 接收外部加密的年龄输入（函数参数）
-- **`euint32`**: 内部加密的32位整数（存储年龄）
-- **`ebool`**: 加密的布尔值（存储比较结果）
+#### 1.2 Using Encrypted Data Types
+- **`externalEuint32`**: Receives externally encrypted age input (function parameter)
+- **`euint32`**: Internally encrypted 32-bit integer (stores age)
+- **`ebool`**: Encrypted boolean value (stores comparison result)
 
-**代码位置：**
+**Code Location:**
 ```solidity
-mapping(address => ebool) private lastVerificationResult;  // 第12行
-function verifyAge(externalEuint32 inputEuint32, ...) public returns (ebool)  // 第22行
+mapping(address => ebool) private lastVerificationResult;  // Line 12
+function verifyAge(externalEuint32 inputEuint32, ...) public returns (ebool)  // Line 22
 ```
 
-**验证方法：** 
-- 查看合约编译后的ABI，确认类型为 `externalEuint32` 和 `ebool`
-- 在 Etherscan 上查看合约，这些类型会显示为 `bytes32`
+**Verification Method:** 
+- Check the compiled ABI to confirm types are `externalEuint32` and `ebool`
+- On Etherscan, these types will display as `bytes32`
 
-#### 1.3 FHE同态运算
-**代码位置：** `contracts/VeriSafe.sol` 第27行、第31行
+#### 1.3 FHE Homomorphic Operations
+**Code Location:** `contracts/VeriSafe.sol` lines 27, 31
 
 ```solidity
-// 转换外部加密输入为内部加密类型（包含零知识证明验证）
+// Convert external encrypted input to internal encrypted type (includes zero-knowledge proof verification)
 euint32 ageEncrypted = FHE.fromExternal(inputEuint32, inputProof);
 
-// 🔑 核心FHE操作：在加密数据上进行同态比较（不泄露真实值）
+// 🔑 Core FHE Operation: Perform homomorphic comparison on encrypted data (without revealing actual value)
 ebool isAgeValid = FHE.ge(ageEncrypted, FHE.asEuint32(MIN_AGE));
 ```
 
-**FHE操作说明：**
-- `FHE.fromExternal()`: 验证并转换外部加密输入
-- `FHE.asEuint32()`: 将明文常量转换为加密类型
-- `FHE.ge()`: **同态大于等于比较** - 这是真正的FHE运算！
+**FHE Operation Description:**
+- `FHE.fromExternal()`: Verifies and converts external encrypted input
+- `FHE.asEuint32()`: Converts plaintext constant to encrypted type
+- `FHE.ge()`: **Homomorphic greater-than-or-equal comparison** - This is the real FHE computation!
 
-**验证方法：**
-- 在 Sepolia Etherscan 查看交易，会看到对 FHEVM 预编译合约的调用（地址：`0x00000000000000000000000000000000000000XX`）
-- 查看 Gas 消耗：FHE运算的 Gas 消耗明显高于普通运算
+**Verification Method:**
+- Check transactions on Sepolia Etherscan for calls to FHEVM precompiled contracts (address: `0x00000000000000000000000000000000000000XX`)
+- Check Gas consumption: FHE operations consume significantly more Gas than regular operations
 
-#### 1.4 解密权限管理
-**代码位置：** `contracts/VeriSafe.sol` 第34、41、45、47行
+#### 1.4 Decryption Permission Management
+**Code Location:** `contracts/VeriSafe.sol` lines 34, 41, 45, 47
 
 ```solidity
-FHE.allowThis(isAgeValid);  // 允许合约内部使用
-FHE.allow(isAgeValid, msg.sender);  // 允许用户解密
+FHE.allowThis(isAgeValid);  // Allow contract internal use
+FHE.allow(isAgeValid, msg.sender);  // Allow user decryption
 ```
 
-**验证方法：** 这些调用会在链上记录权限，可通过事件日志验证
+**Verification Method:** These calls are recorded on-chain as permission grants, verifiable via event logs
 
 ---
 
-### 2. **前端层（App.tsx）**
+### 2. **Frontend Layer (App.tsx)**
 
-#### 2.1 初始化FHEVM SDK
-**代码位置：** `frontend/src/App.tsx` 第3行、第325行、第334行
+#### 2.1 Initialize FHEVM SDK
+**Code Location:** `frontend/src/App.tsx` lines 3, 325, 334
 
 ```typescript
 import { initSDK, createInstance, SepoliaConfig } from '@zama-fhe/relayer-sdk/web';
 
-await initSDK();  // 初始化FHEVM SDK
-fhevmInstanceRef.current = await createInstance(SepoliaConfig);  // 创建实例
+await initSDK();  // Initialize FHEVM SDK
+fhevmInstanceRef.current = await createInstance(SepoliaConfig);  // Create instance
 ```
 
-**验证方法：**
-- 打开浏览器控制台，应该看到 "FHEVM SDK initialized"
-- 检查 `fhevmInstanceRef.current` 对象，应包含7个方法
+**Verification Method:**
+- Open browser console, should see "FHEVM SDK initialized"
+- Check `fhevmInstanceRef.current` object, should contain 7 methods
 
-#### 2.2 客户端加密年龄数据
-**代码位置：** `frontend/src/App.tsx` 第470-477行
+#### 2.2 Client-Side Age Data Encryption
+**Code Location:** `frontend/src/App.tsx` lines 470-477
 
 ```typescript
-// 🔑 客户端加密流程
+// 🔑 Client-side encryption flow
 const encryptedInput = fhevmInstanceRef.current.createEncryptedInput(CONTRACT_ADDRESS, account);
-const encryptedAge = encryptedInput.add32(ageNum);  // 加密年龄值
+const encryptedAge = encryptedInput.add32(ageNum);  // Encrypt age value
 const { handles, inputProof } = await encryptedAge.encrypt();
 ```
 
-**验证方法：**
-- 控制台查看 `handles` 和 `inputProof` - 这些是加密数据
-- `handles[0]` 是一个32字节的随机数据（不是明文年龄）
-- `inputProof` 是零知识证明（约100字节）
+**Verification Method:**
+- Check console for `handles` and `inputProof` - these are encrypted data
+- `handles[0]` is a 32-byte random data (not plaintext age)
+- `inputProof` is a zero-knowledge proof (~100 bytes)
 
-#### 2.3 解密验证结果
-**代码位置：** `frontend/src/App.tsx` 第618-691行
+#### 2.3 Decrypt Verification Result
+**Code Location:** `frontend/src/App.tsx` lines 618-691
 
 ```typescript
-// 生成FHE密钥对
+// Generate FHE keypair
 const keypair = fhevmInstanceRef.current.generateKeypair();
 
-// 创建EIP712签名结构（授权解密）
+// Create EIP712 signature structure (authorize decryption)
 const eip712 = fhevmInstanceRef.current.createEIP712(...);
 const signature = await signerRef.current.signTypedData(...);
 
-// 🔑 解密加密的布尔结果
+// 🔑 Decrypt encrypted boolean result
 const decryptedResults = await fhevmInstanceRef.current.userDecrypt(
   handleContractPair,
   keypair.privateKey,
@@ -110,157 +110,156 @@ const decryptedResults = await fhevmInstanceRef.current.userDecrypt(
 );
 ```
 
-**验证方法：**
-- 控制台应显示 "Decrypted results:" 包含解密后的布尔值
-- 验证年龄20应解密为 `true`，年龄2应解密为 `false`
+**Verification Method:**
+- Console should display "Decrypted results:" containing decrypted boolean value
+- Age 20 should decrypt to `true`, age 2 should decrypt to `false`
 
 ---
 
-## 🔍 如何验证FHE是否真正使用
+## 🔍 How to Verify FHE is Actually Used
 
-### 方法1：查看区块链交易（最可靠）
+### Method 1: View Blockchain Transactions (Most Reliable)
 
-1. **在 Sepolia Etherscan 查看交易**
-   - 打开：https://sepolia.etherscan.io/tx/YOUR_TX_HASH
-   - 查找对 FHEVM 预编译合约的调用
-   - 预编译合约地址通常为：`0x00000000000000000000000000000000000000XX`
+1. **View Transaction on Sepolia Etherscan**
+   - Open: https://sepolia.etherscan.io/tx/YOUR_TX_HASH
+   - Look for calls to FHEVM precompiled contracts
+   - Precompiled contract addresses are typically: `0x00000000000000000000000000000000000000XX`
 
-2. **检查交易输入数据**
-   - 输入数据应该包含加密的 handle（32字节）
-   - 不应该包含明文年龄值
+2. **Check Transaction Input Data**
+   - Input data should contain encrypted handles (32 bytes)
+   - Should NOT contain plaintext age values
 
-3. **查看Gas消耗**
-   - FHE运算的Gas消耗通常在 200,000+（比普通运算高很多）
-   - 普通比较运算只需要几千Gas
+3. **View Gas Consumption**
+   - FHE operations typically consume 200,000+ Gas (much higher than regular operations)
+   - Regular comparison operations only need a few thousand Gas
 
-### 方法2：查看合约代码
+### Method 2: Check Contract Code
 
 ```bash
-# 检查合约是否使用FHE类型
+# Check if contract uses FHE types
 cd VeriSafe-Final
 grep -r "euint32\|ebool\|externalEuint32" contracts/
 grep -r "FHE\." contracts/
 ```
 
-**预期结果：**
-- 找到 `FHE.fromExternal`
-- 找到 `FHE.ge`
-- 找到 `FHE.allow` 和 `FHE.allowThis`
+**Expected Results:**
+- Find `FHE.fromExternal`
+- Find `FHE.ge`
+- Find `FHE.allow` and `FHE.allowThis`
 
-### 方法3：前端控制台验证
+### Method 3: Frontend Console Verification
 
-打开浏览器控制台（F12），查看日志：
+Open browser console (F12), check logs:
 
-1. **加密阶段：**
+1. **Encryption Phase:**
    ```
    Encrypting age: 20
-   Handles[0] value: Uint8Array(32)  // 这是加密后的数据，不是20
-   InputProof length: 100  // 零知识证明
+   Handles[0] value: Uint8Array(32)  // This is encrypted data, not 20
+   InputProof length: 100  // Zero-knowledge proof
    ```
 
-2. **合约调用阶段：**
+2. **Contract Call Phase:**
    ```
    Transaction sent: 0x...
-   Gas estimate: 217907  // 高Gas消耗表明使用了FHE
+   Gas estimate: 217907  // High Gas consumption indicates FHE usage
    ```
 
-3. **解密阶段：**
+3. **Decryption Phase:**
    ```
    Calling userDecrypt...
-   Decrypted results: { "0x...": true }  // 解密后的布尔值
+   Decrypted results: { "0x...": true }  // Decrypted boolean value
    ```
 
-### 方法4：对比测试（验证隐私性）
+### Method 4: Comparison Testing (Verify Privacy)
 
-**测试场景：**
-1. 输入年龄 20 → 应该返回 Qualified
-2. 输入年龄 2 → 应该返回 Not Qualified
+**Test Scenario:**
+1. Input age 20 → should return Qualified
+2. Input age 2 → should return Not Qualified
 
-**关键验证点：**
-- **区块链上存储的是加密数据，不是明文**
-- 查看 Etherscan 上的交易，不应该看到明文年龄值
-- 只有通过 `userDecrypt` 才能知道真实结果
+**Key Verification Points:**
+- **Encrypted data is stored on-chain, not plaintext**
+- View transaction on Etherscan, should NOT see plaintext age value
+- Only through `userDecrypt` can the real result be known
 
-### 方法5：检查依赖包
+### Method 5: Check Dependencies
 
 ```bash
 cd VeriSafe-Final
 cat package.json | grep -i "fhe\|zama"
 ```
 
-**预期看到：**
-- `@fhevm/solidity`: FHEVM Solidity库
-- `@fhevm/hardhat-plugin`: Hardhat FHEVM插件
+**Expected to See:**
+- `@fhevm/solidity`: FHEVM Solidity library
+- `@fhevm/hardhat-plugin`: Hardhat FHEVM plugin
 - `@zama-fhe/relayer-sdk`: Zama FHE Relayer SDK
 
 ---
 
-## ✅ FHE技术使用清单
+## ✅ FHE Technology Usage Checklist
 
-### 合约层 ✅
-- [x] 使用 `externalEuint32` 接收加密输入
-- [x] 使用 `FHE.fromExternal()` 验证并转换
-- [x] 使用 `FHE.ge()` 进行同态比较
-- [x] 返回 `ebool` 加密布尔值
-- [x] 使用 `FHE.allow()` 管理解密权限
+### Contract Layer ✅
+- [x] Use `externalEuint32` to receive encrypted input
+- [x] Use `FHE.fromExternal()` to verify and convert
+- [x] Use `FHE.ge()` to perform homomorphic comparison
+- [x] Return `ebool` encrypted boolean value
+- [x] Use `FHE.allow()` to manage decryption permissions
 
-### 前端层 ✅
-- [x] 使用 `createEncryptedInput()` 创建加密输入
-- [x] 使用 `add32()` 加密数值
-- [x] 使用 `encrypt()` 生成handle和proof
-- [x] 使用 `userDecrypt()` 解密结果
+### Frontend Layer ✅
+- [x] Use `createEncryptedInput()` to create encrypted input
+- [x] Use `add32()` to encrypt numeric values
+- [x] Use `encrypt()` to generate handles and proof
+- [x] Use `userDecrypt()` to decrypt results
 
-### 网络配置 ✅
-- [x] 使用 `SepoliaConfig` 配置Sepolia测试网
-- [x] 合约继承 `SepoliaConfig` 以访问FHEVM预编译合约
-
----
-
-## 🎯 核心FHE特性验证
-
-### 1. **隐私保护**
-✅ **验证方法：** 在 Etherscan 查看交易，年龄值始终是加密的（handle），不会泄露真实年龄
-
-### 2. **同态运算**
-✅ **验证方法：** `FHE.ge()` 直接在加密数据上进行比较，无需解密
-
-### 3. **权限控制**
-✅ **验证方法：** 只有获得 `FHE.allow()` 权限的用户才能解密结果
-
-### 4. **零知识证明**
-✅ **验证方法：** `inputProof` 证明加密数据的有效性，但不泄露内容
+### Network Configuration ✅
+- [x] Use `SepoliaConfig` to configure Sepolia testnet
+- [x] Contract inherits `SepoliaConfig` to access FHEVM precompiled contracts
 
 ---
 
-## 📊 FHE vs 传统方法对比
+## 🎯 Core FHE Feature Verification
 
-| 特性 | 传统方法 | FHE方法（本项目） |
-|------|---------|-----------------|
-| **数据存储** | 明文存储年龄 | 加密存储（handle） |
-| **运算方式** | 解密→比较→加密 | 直接加密数据比较 |
-| **隐私保护** | ❌ 链上可见 | ✅ 链上加密 |
-| **Gas消耗** | 低（~21,000） | 高（~217,000） |
-| **解密权限** | 公开 | 需要授权 |
+### 1. **Privacy Protection**
+✅ **Verification Method:** View transaction on Etherscan, age values are always encrypted (handles), never revealing actual age
 
----
+### 2. **Homomorphic Computation**
+✅ **Verification Method:** `FHE.ge()` directly compares encrypted data without decryption
 
-## 🔗 相关文件位置
+### 3. **Permission Control**
+✅ **Verification Method:** Only users granted `FHE.allow()` permissions can decrypt results
 
-- **合约代码：** `VeriSafe-Final/contracts/VeriSafe.sol`
-- **前端代码：** `VeriSafe-Final/frontend/src/App.tsx`
-- **配置文件：** `VeriSafe-Final/hardhat.config.ts`
-- **部署地址：** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f` (Sepolia)
+### 4. **Zero-Knowledge Proofs**
+✅ **Verification Method:** `inputProof` proves validity of encrypted data without revealing content
 
 ---
 
-## 📝 总结
+## 📊 FHE vs Traditional Method Comparison
 
-本项目在以下环节使用了FHE技术：
+| Feature | Traditional Method | FHE Method (This Project) |
+|---------|-------------------|--------------------------|
+| **Data Storage** | Plaintext age storage | Encrypted storage (handle) |
+| **Computation Method** | Decrypt → Compare → Encrypt | Direct encrypted data comparison |
+| **Privacy Protection** | ❌ Visible on-chain | ✅ Encrypted on-chain |
+| **Gas Consumption** | Low (~21,000) | High (~217,000) |
+| **Decryption Permission** | Public | Requires authorization |
 
-1. **输入加密**：前端使用FHEVM SDK加密年龄
-2. **同态比较**：合约在加密数据上执行 `>=` 比较
-3. **结果存储**：链上存储加密的布尔值
-4. **结果解密**：前端使用userDecrypt解密结果
+---
 
-**最关键的FHE操作：** `FHE.ge(ageEncrypted, FHE.asEuint32(MIN_AGE))` - 这是真正的同态运算，在不解密的情况下完成比较。
+## 🔗 Related File Locations
 
+- **Contract Code:** `VeriSafe-Final/contracts/VeriSafe.sol`
+- **Frontend Code:** `VeriSafe-Final/frontend/src/App.tsx`
+- **Configuration File:** `VeriSafe-Final/hardhat.config.ts`
+- **Deployment Address:** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f` (Sepolia)
+
+---
+
+## 📝 Summary
+
+This project uses FHE technology in the following areas:
+
+1. **Input Encryption:** Frontend uses FHEVM SDK to encrypt age
+2. **Homomorphic Comparison:** Contract performs `>=` comparison on encrypted data
+3. **Result Storage:** On-chain storage of encrypted boolean values
+4. **Result Decryption:** Frontend uses userDecrypt to decrypt results
+
+**Most Critical FHE Operation:** `FHE.ge(ageEncrypted, FHE.asEuint32(MIN_AGE))` - This is the true homomorphic operation that completes comparison without decryption.

@@ -1,115 +1,115 @@
-# 如何在 Etherscan 上验证 FHE 使用
+# How to Verify FHE Usage on Etherscan
 
-## 📍 步骤指南
+## 📍 Step-by-Step Guide
 
-### 步骤1：找到您的交易
+### Step 1: Find Your Transaction
 
-1. **获取交易哈希（Transaction Hash）**
-   - 在浏览器控制台查看：`Transaction sent: 0x...`
-   - 或者在 MetaMask 中查看交易历史
-   - 示例：`0x484fe6943c5269a2c7e4bc9d3301057eb099618b9cff8e555b8e121b57b2ac12`
+1. **Get Transaction Hash**
+   - Check browser console: `Transaction sent: 0x...`
+   - Or check transaction history in MetaMask
+   - Example: `0x484fe6943c5269a2c7e4bc9d3301057eb099618b9cff8e555b8e121b57b2ac12`
 
-2. **访问 Sepolia Etherscan**
-   - 打开：https://sepolia.etherscan.io/tx/YOUR_TX_HASH
-   - 将 `YOUR_TX_HASH` 替换为您的实际交易哈希
+2. **Access Sepolia Etherscan**
+   - Open: https://sepolia.etherscan.io/tx/YOUR_TX_HASH
+   - Replace `YOUR_TX_HASH` with your actual transaction hash
 
-### 步骤2：查看交易详情
+### Step 2: View Transaction Details
 
-在交易详情页面，查看以下部分：
+On the transaction details page, check the following sections:
 
-#### 2.1 查看 "To" 地址
-- **应该显示：** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f`（您的 VeriSafe 合约地址）
-- **这表明：** 交易是调用您的合约
+#### 2.1 View "To" Address
+- **Should Display:** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f` (Your VeriSafe contract address)
+- **This Indicates:** Transaction is calling your contract
 
-#### 2.2 查看 "Input Data"
-- **点击 "Decode Input Data" 或查看原始数据**
-- **应该看到：**
-  - `inputEuint32`: `0x...`（32字节的 handle，这是加密数据）
-  - `inputProof`: `0x...`（约100字节的零知识证明）
-  - **不应该看到：** 明文年龄值（如 `0x00000014` 表示20）
+#### 2.2 View "Input Data"
+- **Click "Decode Input Data" or view raw data**
+- **Should See:**
+  - `inputEuint32`: `0x...` (32-byte handle, this is encrypted data)
+  - `inputProof`: `0x...` (~100-byte zero-knowledge proof)
+  - **Should NOT See:** Plaintext age value (e.g., `0x00000014` representing 20)
 
-### 步骤3：查看内部交易（Internal Transactions）- 关键！
+### Step 3: View Internal Transactions - Critical!
 
-这是查看 FHEVM 预编译合约调用的关键步骤：
+This is the key step to view FHEVM precompiled contract calls:
 
-1. **滚动到交易详情页面的 "Internal Transactions" 部分**
-   - 或者直接访问：https://sepolia.etherscan.io/tx/YOUR_TX_HASH#internal
+1. **Scroll to "Internal Transactions" section on transaction details page**
+   - Or directly visit: https://sepolia.etherscan.io/tx/YOUR_TX_HASH#internal
 
-2. **查找预编译合约调用**
-   - FHEVM 预编译合约地址格式：`0x00000000000000000000000000000000000000XX`
-   - 常见地址：
-     - `0x0000000000000000000000000000000000000044` (FHE 预编译合约)
-     - `0x0000000000000000000000000000000000000045` (FHE 预编译合约)
+2. **Look for Precompiled Contract Calls**
+   - FHEVM precompiled contract address format: `0x00000000000000000000000000000000000000XX`
+   - Common addresses:
+     - `0x0000000000000000000000000000000000000044` (FHE precompiled contract)
+     - `0x0000000000000000000000000000000000000045` (FHE precompiled contract)
 
-3. **验证调用**
-   - **From:** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f` (您的合约)
-   - **To:** `0x0000000000000000000000000000000000000044` (FHEVM 预编译合约)
+3. **Verify Calls**
+   - **From:** `0xc26042fd8F8fbE521814fE98C27B66003FD0553f` (Your contract)
+   - **To:** `0x0000000000000000000000000000000000000044` (FHEVM precompiled contract)
    - **Value:** 0 ETH
-   - **Input:** 包含加密数据的操作码
+   - **Input:** Contains opcodes with encrypted data
 
-### 步骤4：查看合约状态（State）
+### Step 4: View Contract State
 
-1. **访问合约页面**
+1. **Visit Contract Page**
    - https://sepolia.etherscan.io/address/0xc26042fd8F8fbE521814fE98C27B66003FD0553f
 
-2. **查看 "Read Contract"**
-   - 调用 `getLastVerificationResult()`
-   - **结果应该显示：** `0x...`（加密的 handle，不是明文 true/false）
+2. **View "Read Contract"**
+   - Call `getLastVerificationResult()`
+   - **Result Should Display:** `0x...` (encrypted handle, not plaintext true/false)
 
-3. **查看 "Write Contract" → 查看交易历史**
-   - 查看 `verifyAge` 函数的调用记录
-   - 输入数据应该是加密的 handle
-
----
-
-## 🔍 识别 FHE 操作的标志
-
-### ✅ 表明使用了 FHE 的标志：
-
-1. **高 Gas 消耗**
-   - FHE 运算：200,000+ Gas
-   - 普通运算：~21,000 Gas
-   - **查看位置：** 交易详情页面的 "Gas Used"
-
-2. **预编译合约调用**
-   - 在 "Internal Transactions" 中看到对 `0x0000...0044` 的调用
-   - **这表明：** 执行了 FHE 同态运算
-
-3. **加密数据格式**
-   - 输入数据是 32 字节的随机数据（handle）
-   - 不是明文的数字（如 `0x00000014` 表示 20）
-
-4. **零知识证明**
-   - `inputProof` 字段存在且约 100 字节
-   - **这表明：** 使用了 ZK 证明验证加密输入的有效性
+3. **View "Write Contract" → Check Transaction History**
+   - View `verifyAge` function call records
+   - Input data should be encrypted handles
 
 ---
 
-## 📊 实际示例
+## 🔍 Indicators of FHE Operations
 
-### 正常交易的对比
+### ✅ Signs Indicating FHE Usage:
 
-**传统方式（不使用 FHE）：**
+1. **High Gas Consumption**
+   - FHE operations: 200,000+ Gas
+   - Regular operations: ~21,000 Gas
+   - **View Location:** "Gas Used" on transaction details page
+
+2. **Precompiled Contract Calls**
+   - See calls to `0x0000...0044` in "Internal Transactions"
+   - **This Indicates:** FHE homomorphic operations were executed
+
+3. **Encrypted Data Format**
+   - Input data is 32-byte random data (handle)
+   - Not plaintext numbers (e.g., `0x00000014` representing 20)
+
+4. **Zero-Knowledge Proof**
+   - `inputProof` field exists and is ~100 bytes
+   - **This Indicates:** ZK proof used to verify validity of encrypted input
+
+---
+
+## 📊 Real Examples
+
+### Comparison with Normal Transaction
+
+**Traditional Method (No FHE):**
 ```
-Input Data: 0x00000014  // 明文：20
+Input Data: 0x00000014  // Plaintext: 20
 Gas Used: ~21,000
 ```
 
-**FHE 方式（本项目）：**
+**FHE Method (This Project):**
 ```
-Input Data: 0x2460e5c65698492360c9fda3a0c7b55cc17ab11121000000000000aa36a70400  // 加密 handle
+Input Data: 0x2460e5c65698492360c9fda3a0c7b55cc17ab11121000000000000aa36a70400  // Encrypted handle
 Gas Used: ~217,000
-Internal Transaction to: 0x0000000000000000000000000000000000000044  // FHEVM 预编译
+Internal Transaction to: 0x0000000000000000000000000000000000000044  // FHEVM precompiled
 ```
 
 ---
 
-## 🛠️ 快速验证命令
+## 🛠️ Quick Verification Commands
 
-### 在终端查看交易（需要 ALCHEMY_API_KEY 或 INFURA_API_KEY）
+### View Transaction in Terminal (Requires ALCHEMY_API_KEY or INFURA_API_KEY)
 
 ```bash
-# 查看交易详情
+# View transaction details
 curl "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY" \
   -X POST \
   -H "Content-Type: application/json" \
@@ -121,7 +121,7 @@ curl "https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY" \
   }'
 ```
 
-### 使用 Hardhat 验证
+### Verify Using Hardhat
 
 ```bash
 cd VeriSafe-Final
@@ -130,38 +130,37 @@ npx hardhat verify --network sepolia 0xc26042fd8F8fbE521814fE98C27B66003FD0553f
 
 ---
 
-## 📸 视觉化检查清单
+## 📸 Visual Checklist
 
-在 Etherscan 交易页面，确认以下内容：
+On Etherscan transaction page, confirm the following:
 
-- [ ] **交易状态：** Success ✅
-- [ ] **Gas Used：** > 200,000（表明使用了 FHE）
-- [ ] **To 地址：** 您的合约地址 `0xc26042...`
-- [ ] **Input Data：** 包含加密 handle（32字节）和 proof（~100字节）
-- [ ] **Internal Transactions：** 包含对 `0x0000...0044` 的调用（FHEVM 预编译）
-- [ ] **合约存储：** 查看合约状态，存储的是加密的 handle，不是明文
-
----
-
-## 🔗 有用的链接
-
-- **Sepolia Etherscan：** https://sepolia.etherscan.io
-- **您的合约：** https://sepolia.etherscan.io/address/0xc26042fd8F8fbE521814fE98C27B66003FD0553f
-- **FHEVM 文档：** https://docs.zama.ai/fhevm
+- [ ] **Transaction Status:** Success ✅
+- [ ] **Gas Used:** > 200,000 (indicates FHE usage)
+- [ ] **To Address:** Your contract address `0xc26042...`
+- [ ] **Input Data:** Contains encrypted handle (32 bytes) and proof (~100 bytes)
+- [ ] **Internal Transactions:** Contains call to `0x0000...0044` (FHEVM precompiled)
+- [ ] **Contract Storage:** View contract state, stored values are encrypted handles, not plaintext
 
 ---
 
-## 💡 提示
+## 🔗 Useful Links
 
-1. **如果看不到 Internal Transactions**
-   - 可能需要刷新页面
-   - 某些交易可能没有显示内部交易（取决于 Etherscan 的索引）
+- **Sepolia Etherscan:** https://sepolia.etherscan.io
+- **Your Contract:** https://sepolia.etherscan.io/address/0xc26042fd8F8fbE521814fE98C27B66003FD0553f
+- **FHEVM Documentation:** https://docs.zama.ai/fhevm
 
-2. **Gas 消耗说明**
-   - FHE 运算的计算成本很高，这是正常的
-   - 这是保护隐私的代价
+---
 
-3. **验证加密性**
-   - 最直接的验证：在 Etherscan 上，您永远看不到明文年龄
-   - 所有数据都以加密形式（handle）存储和传输
+## 💡 Tips
 
+1. **If Internal Transactions Are Not Visible**
+   - May need to refresh page
+   - Some transactions may not display internal transactions (depends on Etherscan indexing)
+
+2. **Gas Consumption Explanation**
+   - FHE operations have high computational cost, this is normal
+   - This is the price of privacy protection
+
+3. **Verify Encryption**
+   - Most direct verification: On Etherscan, you will never see plaintext age
+   - All data is stored and transmitted in encrypted form (handles)

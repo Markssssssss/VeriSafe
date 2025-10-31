@@ -1,106 +1,106 @@
-# VeriSafe 部署指南 - Vercel
+# VeriSafe Deployment Guide - Vercel
 
-本指南将帮助您将 VeriSafe MVP 部署到 Vercel，让远程朋友可以体验。
+This guide will help you deploy VeriSafe MVP to Vercel so remote friends can experience it.
 
-## 📋 前置要求
+## 📋 Prerequisites
 
-1. **GitHub 账号**（如果没有，请先注册：https://github.com）
-2. **Vercel 账号**（可以免费注册：https://vercel.com）
+1. **GitHub Account** (If you don't have one, register at: https://github.com)
+2. **Vercel Account** (Free registration at: https://vercel.com)
 
 ---
 
-## 🚀 部署步骤
+## 🚀 Deployment Steps
 
-### 方法一：通过 Vercel CLI（推荐，最快）
+### Method 1: Via Vercel CLI (Recommended, Fastest)
 
-#### 步骤 1：安装 Vercel CLI
+#### Step 1: Install Vercel CLI
 
 ```bash
 npm i -g vercel
 ```
 
-#### 步骤 2：登录 Vercel
+#### Step 2: Login to Vercel
 
 ```bash
 vercel login
 ```
 
-#### 步骤 3：进入前端目录并部署
+#### Step 3: Enter Frontend Directory and Deploy
 
 ```bash
 cd VeriSafe-Final/frontend
 vercel
 ```
 
-按照提示：
-- ✅ 是否要将现有项目链接到 Vercel？输入 `N`（首次部署）
-- ✅ 项目名称：输入 `verisafe` 或直接回车使用默认名称
-- ✅ 目录：直接回车（使用当前目录 `frontend`）
-- ✅ 覆盖设置：直接回车使用默认
+Follow prompts:
+- ✅ Link existing project to Vercel? Enter `N` (first deployment)
+- ✅ Project name: Enter `verisafe` or press Enter for default name
+- ✅ Directory: Press Enter (use current directory `frontend`)
+- ✅ Override settings: Press Enter to use defaults
 
-#### 步骤 4：等待部署完成
+#### Step 4: Wait for Deployment
 
-部署完成后，Vercel 会显示：
+After deployment, Vercel will display:
 ```
 ✅ Production: https://verisafe.vercel.app
 ```
 
 ---
 
-### 方法二：通过 Vercel 网站（适合初学者）
+### Method 2: Via Vercel Website (Beginner-Friendly)
 
-#### 步骤 1：将代码推送到 GitHub
+#### Step 1: Push Code to GitHub
 
 ```bash
-# 在 VeriSafe-Final 目录下
+# In VeriSafe-Final directory
 cd /Users/mark/Desktop/cursor/zama/VeriSafe-Final
 
-# 初始化 Git（如果还没有）
+# Initialize Git (if not already done)
 git init
 
-# 创建 .gitignore（如果还没有）
-# 确保 .gitignore 包含 node_modules, dist, .env 等
+# Create .gitignore (if not already exists)
+# Ensure .gitignore includes node_modules, dist, .env, etc.
 
-# 添加所有文件
+# Add all files
 git add .
 
-# 提交
+# Commit
 git commit -m "Initial commit: VeriSafe MVP"
 
-# 在 GitHub 创建新仓库，然后推送
+# Create new repository on GitHub, then push
 git remote add origin https://github.com/YOUR_USERNAME/verisafe.git
 git branch -M main
 git push -u origin main
 ```
 
-#### 步骤 2：在 Vercel 导入项目
+#### Step 2: Import Project in Vercel
 
-1. 访问 https://vercel.com/new
-2. 点击 **"Import Git Repository"**
-3. 选择您的 GitHub 仓库
-4. **配置项目：**
+1. Visit https://vercel.com/new
+2. Click **"Import Git Repository"**
+3. Select your GitHub repository
+4. **Configure Project:**
    - **Framework Preset:** `Vite`
-   - **Root Directory:** `frontend` ⚠️ 重要！
+   - **Root Directory:** `frontend` ⚠️ Important!
    - **Build Command:** `npm run build`
    - **Output Directory:** `dist`
    - **Install Command:** `npm install`
 
-5. 点击 **"Deploy"**
+5. Click **"Deploy"**
 
-#### 步骤 3：等待部署完成
+#### Step 3: Wait for Deployment
 
-Vercel 会自动：
-- 安装依赖
-- 构建项目
-- 部署到全球 CDN
+Vercel will automatically:
+- Install dependencies
+- Build project
+- Deploy to global CDN
 
 ---
 
-## ⚙️ 配置说明
+## ⚙️ Configuration
 
-### Vercel 项目设置（如果使用方法二）
+### Vercel Project Settings (If Using Method 2)
 
-在 Vercel 项目设置中，确保：
+In Vercel project settings, ensure:
 
 ```
 Root Directory: frontend
@@ -109,68 +109,68 @@ Output Directory: dist
 Install Command: npm install
 ```
 
-### 环境变量（如果需要）
+### Environment Variables (If Needed)
 
-当前项目不需要环境变量（合约地址已硬编码），但如果将来需要，可以在 Vercel 项目设置中添加：
+Current project doesn't require environment variables (contract address is hardcoded), but if needed in the future, you can add them in Vercel project settings:
 
-1. 进入项目设置 → Environment Variables
-2. 添加变量：
+1. Go to Project Settings → Environment Variables
+2. Add variables:
    - `VITE_CONTRACT_ADDRESS` = `0xc26042fd8F8fbE521814fE98C27B66003FD0553f`
    - `VITE_SEPOLIA_CHAIN_ID` = `11155111`
 
 ---
 
-## 🔍 验证部署
+## 🔍 Verify Deployment
 
-部署完成后，访问您的 Vercel URL（如 `https://verisafe.vercel.app`），确认：
+After deployment completes, visit your Vercel URL (e.g., `https://verisafe.vercel.app`) and confirm:
 
-1. ✅ 页面正常加载
-2. ✅ 可以连接钱包（MetaMask）
-3. ✅ 网络自动切换到 Sepolia
-4. ✅ 可以输入年龄并验证
-5. ✅ 交易可以成功执行
-
----
-
-## 📝 常见问题
-
-### 1. 构建失败：找不到模块
-
-**解决方案：**
-确保 `package.json` 中所有依赖都已正确安装。
-
-### 2. WebAssembly 文件未加载
-
-**解决方案：**
-检查 `vercel.json` 中的 WASM 头部配置是否正确。
-
-### 3. 路由 404 错误
-
-**解决方案：**
-确保 `vercel.json` 中的 `rewrites` 配置正确，所有路由都重定向到 `index.html`。
-
-### 4. FHEVM SDK 初始化失败
-
-**可能原因：**
-- 浏览器不兼容
-- MetaMask 未安装
-- 网络连接问题
-
-**解决方案：**
-- 使用 Chrome 或 Firefox
-- 确保安装了 MetaMask
-- 检查浏览器控制台错误信息
+1. ✅ Page loads normally
+2. ✅ Can connect wallet (MetaMask)
+3. ✅ Network automatically switches to Sepolia
+4. ✅ Can input age and verify
+5. ✅ Transactions execute successfully
 
 ---
 
-## 🔄 更新部署
+## 📝 Common Issues
 
-每次推送代码到 GitHub 后，Vercel 会自动：
-1. 检测到新的提交
-2. 自动重新构建
-3. 部署到生产环境
+### 1. Build Failed: Module Not Found
 
-或者手动触发：
+**Solution:**
+Ensure all dependencies in `package.json` are correctly installed.
+
+### 2. WebAssembly Files Not Loading
+
+**Solution:**
+Check if WASM header configuration in `vercel.json` is correct.
+
+### 3. Route 404 Errors
+
+**Solution:**
+Ensure `rewrites` configuration in `vercel.json` is correct, all routes redirect to `index.html`.
+
+### 4. FHEVM SDK Initialization Failed
+
+**Possible Causes:**
+- Browser incompatibility
+- MetaMask not installed
+- Network connection issues
+
+**Solution:**
+- Use Chrome or Firefox
+- Ensure MetaMask is installed
+- Check browser console for error messages
+
+---
+
+## 🔄 Update Deployment
+
+After each push to GitHub, Vercel will automatically:
+1. Detect new commits
+2. Automatically rebuild
+3. Deploy to production
+
+Or manually trigger:
 ```bash
 cd frontend
 vercel --prod
@@ -178,69 +178,68 @@ vercel --prod
 
 ---
 
-## 🌐 自定义域名（可选）
+## 🌐 Custom Domain (Optional)
 
-1. 在 Vercel 项目设置 → Domains
-2. 添加您的自定义域名
-3. 按照提示配置 DNS 记录
-
----
-
-## 📊 监控和分析
-
-Vercel 提供：
-- **Analytics：** 访问统计
-- **Speed Insights：** 性能监控
-- **Logs：** 实时日志查看
+1. In Vercel Project Settings → Domains
+2. Add your custom domain
+3. Follow prompts to configure DNS records
 
 ---
 
-## ✅ 部署检查清单
+## 📊 Monitoring and Analytics
 
-- [ ] GitHub 仓库已创建并推送代码
-- [ ] Vercel 账号已注册
-- [ ] 项目已在 Vercel 导入
-- [ ] Root Directory 设置为 `frontend`
-- [ ] Build Command 设置为 `npm run build`
-- [ ] Output Directory 设置为 `dist`
-- [ ] 部署成功，可以访问 URL
-- [ ] 功能测试通过（连接钱包、验证年龄）
+Vercel provides:
+- **Analytics:** Access statistics
+- **Speed Insights:** Performance monitoring
+- **Logs:** Real-time log viewing
 
 ---
 
-## 🎉 完成后
+## ✅ Deployment Checklist
 
-分享给朋友：
+- [ ] GitHub repository created and code pushed
+- [ ] Vercel account registered
+- [ ] Project imported to Vercel
+- [ ] Root Directory set to `frontend`
+- [ ] Build Command set to `npm run build`
+- [ ] Output Directory set to `dist`
+- [ ] Deployment successful, URL accessible
+- [ ] Feature testing passed (connect wallet, verify age)
+
+---
+
+## 🎉 After Completion
+
+Share with friends:
 ```
-🎊 VeriSafe MVP 已上线！
+🎊 VeriSafe MVP is now live!
 
-体验地址：https://verisafe.vercel.app
+Experience URL: https://verisafe.vercel.app
 
-使用说明：
-1. 打开链接
-2. 连接 MetaMask 钱包
-3. 切换到 Sepolia 测试网
-4. 输入年龄进行验证
+Usage Instructions:
+1. Open the link
+2. Connect MetaMask wallet
+3. Switch to Sepolia testnet
+4. Enter age to verify
 
-⚠️ 注意：需要使用 Sepolia 测试网 ETH（可以从水龙头获取）
+⚠️ Note: Requires Sepolia testnet ETH (can get from faucet)
 ```
 
 ---
 
-## 📚 参考资源
+## 📚 Reference Resources
 
-- [Vercel 文档](https://vercel.com/docs)
-- [Vite 部署指南](https://vitejs.dev/guide/static-deploy.html#vercel)
-- [示例项目](https://nexus-social-dapp.vercel.app/)
+- [Vercel Documentation](https://vercel.com/docs)
+- [Vite Deployment Guide](https://vitejs.dev/guide/static-deploy.html#vercel)
+- [Example Project](https://nexus-social-dapp.vercel.app/)
 
 ---
 
-## 💡 提示
+## 💡 Tips
 
-1. **首次部署可能需要 2-5 分钟**
-2. **后续更新部署只需 30 秒-1 分钟**
-3. **Vercel 免费版完全够用**（支持无限项目、自动 HTTPS、全球 CDN）
-4. **建议使用 Vercel CLI**，部署更快更方便
+1. **First deployment may take 2-5 minutes**
+2. **Subsequent updates only take 30 seconds - 1 minute**
+3. **Vercel free tier is sufficient** (supports unlimited projects, automatic HTTPS, global CDN)
+4. **Recommend using Vercel CLI** for faster and more convenient deployment
 
-祝部署顺利！🚀
-
+Happy deploying! 🚀

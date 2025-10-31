@@ -1,118 +1,118 @@
-# Ubuntu 服务器部署指南
+# Ubuntu Server Deployment Guide
 
-## 前置要求
+## Prerequisites
 
-- Ubuntu 20.04 或更高版本
-- 具有 sudo 权限的用户
-- 服务器公网 IP 或域名
-- （可选）域名和 SSL 证书
+- Ubuntu 20.04 or higher
+- User with sudo privileges
+- Server public IP or domain
+- (Optional) Domain and SSL certificate
 
 ---
 
-## 步骤 1: 安装必要软件
+## Step 1: Install Required Software
 
-### 1.1 更新系统
+### 1.1 Update System
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
-### 1.2 安装 Node.js (推荐 v20.x)
+### 1.2 Install Node.js (Recommended v20.x)
 ```bash
-# 使用 NodeSource 安装 Node.js 20
+# Install Node.js 20 using NodeSource
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
-# 验证安装
-node --version  # 应该显示 v20.x.x
+# Verify installation
+node --version  # Should show v20.x.x
 npm --version
 ```
 
-### 1.3 安装 Nginx
+### 1.3 Install Nginx
 ```bash
 sudo apt install -y nginx
 
-# 启动并设置开机自启
+# Start and enable on boot
 sudo systemctl start nginx
 sudo systemctl enable nginx
 
-# 验证状态
+# Verify status
 sudo systemctl status nginx
 ```
 
-### 1.4 安装 PM2 (进程管理器)
+### 1.4 Install PM2 (Process Manager)
 ```bash
 sudo npm install -g pm2
 
-# 设置 PM2 开机自启
+# Set PM2 to start on boot
 pm2 startup
-# 按照提示执行生成的命令（通常是 sudo env PATH=...）
+# Follow the prompt to execute the generated command (usually sudo env PATH=...)
 ```
 
 ---
 
-## 步骤 2: 克隆和构建项目
+## Step 2: Clone and Build Project
 
-### 2.1 克隆项目
+### 2.1 Clone Repository
 ```bash
-# 进入合适的目录
-cd /var/www  # 或你喜欢的目录
+# Navigate to appropriate directory
+cd /var/www  # or your preferred directory
 
-# 克隆仓库
+# Clone repository
 sudo git clone https://github.com/Markssssssss/VeriSafe.git
 sudo chown -R $USER:$USER VeriSafe
 cd VeriSafe
 ```
 
-### 2.2 构建前端
+### 2.2 Build Frontend
 ```bash
 cd frontend
 
-# 安装依赖
+# Install dependencies
 npm install
 
-# 构建生产版本
+# Build production version
 npm run build
 
-# 验证构建产物
+# Verify build output
 ls -la dist/
-# 应该看到 index.html 和 assets/ 目录
+# Should see index.html and assets/ directory
 ```
 
 ---
 
-## 步骤 3: 配置 Nginx
+## Step 3: Configure Nginx
 
-### 3.1 创建 Nginx 配置
+### 3.1 Create Nginx Configuration
 ```bash
 sudo nano /etc/nginx/sites-available/verisafe
 ```
 
-### 3.2 添加以下配置内容：
+### 3.2 Add the following configuration:
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;  # 替换为你的域名或 IP
+    server_name your-domain.com;  # Replace with your domain or IP
     
-    # 如果需要允许 IP 访问，使用：
+    # If you need to allow IP access, use:
     # server_name _;
     
     root /var/www/VeriSafe/frontend/dist;
     index index.html;
 
-    # 支持单页应用（React Router）
+    # Support Single Page Application (React Router)
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # 静态资源缓存
+    # Static asset caching
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 
-    # WASM 文件特殊处理（FHEVM SDK 需要）
+    # WASM file special handling (FHEVM SDK requires)
     location ~* \.wasm$ {
         add_header Content-Type application/wasm;
         add_header Cross-Origin-Embedder-Policy require-corp;
@@ -121,113 +121,113 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Gzip 压缩
+    # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
-    # 安全头
+    # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
 }
 ```
 
-### 3.3 启用配置并测试
+### 3.3 Enable Configuration and Test
 ```bash
-# 创建符号链接
+# Create symbolic link
 sudo ln -s /etc/nginx/sites-available/verisafe /etc/nginx/sites-enabled/
 
-# 删除默认配置（可选）
+# Remove default configuration (optional)
 sudo rm /etc/nginx/sites-enabled/default
 
-# 测试 Nginx 配置
+# Test Nginx configuration
 sudo nginx -t
 
-# 重新加载 Nginx
+# Reload Nginx
 sudo systemctl reload nginx
 ```
 
 ---
 
-## 步骤 4: 配置防火墙
+## Step 4: Configure Firewall
 
-### 4.1 允许 HTTP/HTTPS 端口
+### 4.1 Allow HTTP/HTTPS Ports
 ```bash
-# UFW 防火墙
+# UFW firewall
 sudo ufw allow 80/tcp   # HTTP
-sudo ufw allow 443/tcp  # HTTPS (如果使用 SSL)
-sudo ufw allow 22/tcp   # SSH (确保不会锁在外面)
+sudo ufw allow 443/tcp  # HTTPS (if using SSL)
+sudo ufw allow 22/tcp   # SSH (ensure you won't lock yourself out)
 sudo ufw enable
 
-# 验证
+# Verify
 sudo ufw status
 ```
 
 ---
 
-## 步骤 5: 配置 SSL/HTTPS (可选但推荐)
+## Step 5: Configure SSL/HTTPS (Optional but Recommended)
 
-### 5.1 使用 Let's Encrypt (免费 SSL)
+### 5.1 Use Let's Encrypt (Free SSL)
 ```bash
-# 安装 Certbot
+# Install Certbot
 sudo apt install -y certbot python3-certbot-nginx
 
-# 获取证书（需要域名已指向服务器）
+# Obtain certificate (requires domain to point to server)
 sudo certbot --nginx -d your-domain.com
 
-# 自动续期测试
+# Test auto-renewal
 sudo certbot renew --dry-run
 ```
 
-### 5.2 Certbot 会自动更新 Nginx 配置
-证书会在 `/etc/letsencrypt/` 目录，Nginx 配置会自动更新为 HTTPS。
+### 5.2 Certbot Will Automatically Update Nginx Configuration
+Certificates will be in `/etc/letsencrypt/` directory, Nginx configuration will automatically update to HTTPS.
 
 ---
 
-## 步骤 6: 自动化部署脚本
+## Step 6: Automated Deployment Script
 
-### 6.1 创建部署脚本
+### 6.1 Create Deployment Script
 ```bash
 cd /var/www/VeriSafe
 nano deploy.sh
 ```
 
-### 6.2 添加以下内容：
+### 6.2 Add the following content:
 
 ```bash
 #!/bin/bash
 
-set -e  # 遇到错误立即退出
+set -e  # Exit immediately on error
 
 echo "🚀 Starting VeriSafe deployment..."
 
-# 进入项目目录
+# Enter project directory
 cd /var/www/VeriSafe
 
-# 拉取最新代码
+# Pull latest code
 echo "📥 Pulling latest code..."
 git pull origin main
 
-# 进入前端目录
+# Enter frontend directory
 cd frontend
 
-# 安装依赖（如果需要）
+# Install dependencies (if needed)
 echo "📦 Installing dependencies..."
 npm install
 
-# 构建项目
+# Build project
 echo "🔨 Building frontend..."
 npm run build
 
-# 验证构建
+# Verify build
 if [ ! -f "dist/index.html" ]; then
     echo "❌ Build failed: index.html not found"
     exit 1
 fi
 
-# 重启 Nginx（如果需要）
+# Restart Nginx (if needed)
 echo "🔄 Reloading Nginx..."
 sudo systemctl reload nginx
 
@@ -235,154 +235,153 @@ echo "✅ Deployment completed successfully!"
 echo "📍 Site should be available at: http://your-domain.com"
 ```
 
-### 6.3 设置执行权限
+### 6.3 Set Execute Permissions
 ```bash
 chmod +x deploy.sh
 ```
 
-### 6.4 使用部署脚本
+### 6.4 Use Deployment Script
 ```bash
 ./deploy.sh
 ```
 
 ---
 
-## 步骤 7: 监控和维护
+## Step 7: Monitoring and Maintenance
 
-### 7.1 查看 Nginx 日志
+### 7.1 View Nginx Logs
 ```bash
-# 访问日志
+# Access logs
 sudo tail -f /var/log/nginx/access.log
 
-# 错误日志
+# Error logs
 sudo tail -f /var/log/nginx/error.log
 ```
 
-### 7.2 查看系统资源
+### 7.2 Check System Resources
 ```bash
-# CPU 和内存
-htop  # 需要先安装: sudo apt install htop
+# CPU and memory
+htop  # Requires installation: sudo apt install htop
 
-# 磁盘空间
+# Disk space
 df -h
 ```
 
-### 7.3 设置自动更新（可选）
+### 7.3 Set Up Auto-Updates (Optional)
 ```bash
-# 创建 cron 任务每天检查更新
+# Create cron job to check for updates daily
 crontab -e
 
-# 添加以下行（每天凌晨 3 点检查并拉取更新，但需要手动执行部署）
+# Add the following line (check and pull updates daily at 3 AM, but requires manual deployment execution)
 0 3 * * * cd /var/www/VeriSafe && git fetch && git log HEAD..origin/main --oneline
 ```
 
 ---
 
-## 常见问题排查
+## Troubleshooting
 
-### 问题 1: 403 Forbidden
-**原因：** 文件权限问题
+### Issue 1: 403 Forbidden
+**Cause:** File permission issues
 ```bash
-# 修复权限
+# Fix permissions
 sudo chown -R www-data:www-data /var/www/VeriSafe/frontend/dist
 sudo chmod -R 755 /var/www/VeriSafe/frontend/dist
 ```
 
-### 问题 2: 502 Bad Gateway
-**原因：** Nginx 配置错误或服务未运行
+### Issue 2: 502 Bad Gateway
+**Cause:** Nginx configuration error or service not running
 ```bash
-# 检查 Nginx 配置
+# Check Nginx configuration
 sudo nginx -t
 
-# 检查 Nginx 状态
+# Check Nginx status
 sudo systemctl status nginx
 
-# 重启 Nginx
+# Restart Nginx
 sudo systemctl restart nginx
 ```
 
-### 问题 3: 页面空白或只显示背景
-**原因：** JavaScript 文件路径错误
+### Issue 3: Blank Page or Background Only
+**Cause:** JavaScript file path errors
 ```bash
-# 检查构建产物
+# Check build output
 ls -la /var/www/VeriSafe/frontend/dist/assets/
 
-# 检查 Nginx 配置中的 root 路径是否正确
-# 确保 root 指向 dist 目录
+# Check root path in Nginx configuration is correct
+# Ensure root points to dist directory
 ```
 
-### 问题 4: WASM 文件加载失败
-**原因：** CORS 头缺失
-- 确保 Nginx 配置中有 WASM 文件的特殊处理（见步骤 3.2）
+### Issue 4: WASM Files Not Loading
+**Cause:** Missing CORS headers
+- Ensure Nginx configuration has special handling for WASM files (see Step 3.2)
 
 ---
 
-## 快速命令参考
+## Quick Command Reference
 
 ```bash
-# 部署
+# Deploy
 cd /var/www/VeriSafe && ./deploy.sh
 
-# 查看 Nginx 日志
+# View Nginx logs
 sudo tail -f /var/log/nginx/error.log
 
-# 重启 Nginx
+# Restart Nginx
 sudo systemctl restart nginx
 
-# 测试 Nginx 配置
+# Test Nginx configuration
 sudo nginx -t
 
-# 查看服务状态
+# Check service status
 sudo systemctl status nginx
 ```
 
 ---
 
-## 性能优化建议
+## Performance Optimization Suggestions
 
-### 1. 启用 Nginx 缓存
-在 Nginx 配置中添加：
+### 1. Enable Nginx Caching
+Add to Nginx configuration:
 ```nginx
 proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m;
 ```
 
-### 2. 使用 CDN（可选）
-考虑使用 Cloudflare 或 AWS CloudFront 加速静态资源。
+### 2. Use CDN (Optional)
+Consider using Cloudflare or AWS CloudFront to accelerate static assets.
 
-### 3. 启用 HTTP/2
-确保 SSL 配置中包含 `http2`：
+### 3. Enable HTTP/2
+Ensure SSL configuration includes `http2`:
 ```nginx
 listen 443 ssl http2;
 ```
 
 ---
 
-## 安全建议
+## Security Recommendations
 
-1. **定期更新系统**
+1. **Regular System Updates**
    ```bash
    sudo apt update && sudo apt upgrade
    ```
 
-2. **配置 SSH 密钥认证**
+2. **Configure SSH Key Authentication**
    ```bash
-   # 禁用密码登录（在确保密钥可用后）
+   # Disable password login (after ensuring key works)
    sudo nano /etc/ssh/sshd_config
-   # 设置: PasswordAuthentication no
+   # Set: PasswordAuthentication no
    ```
 
-3. **设置防火墙规则**
-   - 只开放必要端口（80, 443, 22）
+3. **Set Firewall Rules**
+   - Only open necessary ports (80, 443, 22)
 
-4. **定期备份**
+4. **Regular Backups**
    ```bash
-   # 备份构建产物
+   # Backup build output
    tar -czf verisafe-backup-$(date +%Y%m%d).tar.gz /var/www/VeriSafe/frontend/dist
    ```
 
 ---
 
-完成！你的 VeriSafe 应用现在应该可以通过 HTTP 访问了。
+Done! Your VeriSafe application should now be accessible via HTTP.
 
-如果要配置域名和 HTTPS，按照步骤 5 操作即可。
-
+If you want to configure domain and HTTPS, follow Step 5.
