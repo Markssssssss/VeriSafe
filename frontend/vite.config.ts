@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import fs from 'fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -22,6 +24,92 @@ export default defineConfig({
         module: true,
         require: true
       }
+    }),
+    // Custom plugin to handle WASM file serving from node_modules
+    {
+      name: 'wasm-handler',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url && req.url.includes('.wasm')) {
+            console.log('[WASM Handler] Request URL:', req.url);
+            
+            // Extract filename from URL
+            const filename = req.url.split('/').pop() || req.url.split('/').slice(-1)[0];
+            const wasmPath = req.url.replace(/^\//, '').replace(/^\/@fs\//, ''); // Remove leading slash and @fs prefix
+            
+            // Common WASM filenames from relayer-sdk
+            const wasmFiles: Record<string, string> = {
+              'kms_lib_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms/kms_lib_bg.wasm',
+              'tfhe_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe/tfhe_bg.wasm',
+              'node-tfhe_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/node-tfhe/tfhe_bg.wasm',
+            };
+            
+            const possiblePaths = [
+              // Try by filename match first
+              filename && wasmFiles[filename] ? path.resolve(__dirname, wasmFiles[filename]) : null,
+              // Try direct path resolution
+              path.resolve(__dirname, wasmPath),
+              // Try from node_modules root
+              path.resolve(__dirname, 'node_modules', wasmPath),
+              // Try from relayer-sdk
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk', wasmPath),
+              // Try specific known locations
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms', filename || ''),
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe', filename || ''),
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/node-tfhe', filename || ''),
+              // Try without node_modules prefix (in case path already includes it)
+              wasmPath.startsWith('node_modules/') ? path.resolve(__dirname, wasmPath) : null,
+            ].filter((p): p is string => p !== null && p !== '');
+            
+            let found = false;
+            for (const possiblePath of possiblePaths) {
+              try {
+                if (fs.existsSync(possiblePath) && fs.statSync(possiblePath).isFile()) {
+                  console.log('[WASM Handler] Found WASM file at:', possiblePath);
+                  res.setHeader('Content-Type', 'application/wasm');
+                  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+                  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+                  res.setHeader('Access-Control-Allow-Origin', '*');
+                  res.setHeader('Access-Control-Allow-Methods', 'GET');
+                  
+                  const fileContent = fs.readFileSync(possiblePath);
+                  res.setHeader('Content-Length', fileContent.length.toString());
+                  res.end(fileContent);
+                  found = true;
+                  break;
+                }
+              } catch (e) {
+                // Continue to next path
+              }
+            }
+            
+            if (!found) {
+              console.warn('[WASM Handler] WASM file not found for URL:', req.url);
+              console.warn('[WASM Handler] Tried paths:', possiblePaths);
+              // Set headers anyway and let Vite handle it
+              res.setHeader('Content-Type', 'application/wasm');
+              res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+              res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+              next();
+            }
+          } else {
+            next();
+          }
+        });
+      }
+    },
+    // Copy WASM files to public directory during build
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms/kms_lib_bg.wasm',
+          dest: 'assets'
+        },
+        {
+          src: 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe/tfhe_bg.wasm',
+          dest: 'assets'
+        }
+      ]
     })
   ],
   optimizeDeps: {
@@ -63,14 +151,24 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    open: true
+    open: true,
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin'
+    },
+    fs: {
+      // Allow serving files from node_modules/@zama-fhe for WASM files
+      allow: ['..']
+    }
   },
   build: {
     target: 'es2022',
     // Ensure assets are referenced correctly
     assetsDir: 'assets',
-    // Don't inline assets that are too large
+    // Don't inline assets that are too large - WASM files need special handling
     assetsInlineLimit: 4096,
+    // Ensure WASM files are copied correctly
+    copyPublicDir: true,
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/fetch-retry/, /react/, /react-dom/, /keccak/, /@zama-fhe\/relayer-sdk/],
@@ -82,8 +180,13 @@ export default defineConfig({
         manualChunks: {
           'relayer-sdk': ['@zama-fhe/relayer-sdk/web']
         },
-        // Ensure consistent asset naming
-        assetFileNames: 'assets/[name].[hash].[ext]',
+        // Ensure consistent asset naming, especially for WASM files
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.wasm')) {
+            return 'assets/[name][extname]';
+          }
+          return 'assets/[name].[hash][extname]';
+        },
         chunkFileNames: 'assets/[name].[hash].js',
         entryFileNames: 'assets/[name].[hash].js'
       },
