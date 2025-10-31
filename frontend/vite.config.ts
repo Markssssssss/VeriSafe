@@ -13,17 +13,13 @@ export default defineConfig({
     nodePolyfills()
   ],
   optimizeDeps: {
-    // Don't exclude relayer-sdk - let Vite process it properly
+    // Include relayer-sdk to ensure proper processing
     include: ['@zama-fhe/relayer-sdk/web', 'keccak/js.js', 'react', 'react-dom'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
       },
-      jsx: 'automatic',
-      // Ensure CommonJS modules are transformed
-      banner: {
-        js: 'var module = {}; var exports = {};'
-      }
+      jsx: 'automatic'
     }
   },
   resolve: {
