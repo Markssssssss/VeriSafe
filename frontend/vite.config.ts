@@ -6,15 +6,27 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// We'll handle alias exclusion in the resolve.alias config itself
+// No need for a separate plugin
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(), 
-    nodePolyfills()
+    nodePolyfills({
+      // Include polyfills for module and require which keccak needs
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+        module: true,
+        require: true
+      }
+    })
   ],
   optimizeDeps: {
     // Include relayer-sdk to ensure proper processing
-    include: ['@zama-fhe/relayer-sdk/web', 'keccak/js.js', 'react', 'react-dom'],
+    include: ['@zama-fhe/relayer-sdk/web', 'react', 'react-dom', 'keccak/js.js'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
@@ -24,16 +36,15 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      // Custom alias for keccak that doesn't apply when importing from wrapper files
       {
         find: /^keccak$/,
         replacement: path.resolve(__dirname, 'src/keccak-wrapper.js'),
-        customResolver: (id: string, importer?: string) => {
-          // Don't apply alias if importing from keccak-wrapper.js or keccak-real.js
-          if (importer && (importer.includes('keccak-wrapper.js') || importer.includes('keccak-real.js'))) {
-            return null; // Let Vite resolve to node_modules
+        customResolver: (id, importer) => {
+          // Don't apply alias when importing from wrapper files
+          if (importer && (importer.includes('keccak-real.js') || importer.includes('keccak-wrapper.js'))) {
+            return null // Let Vite resolve to node_modules
           }
-          return path.resolve(__dirname, 'src/keccak-wrapper.js');
+          return path.resolve(__dirname, 'src/keccak-wrapper.js')
         }
       },
       {
