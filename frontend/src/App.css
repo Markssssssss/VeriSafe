@@ -1,0 +1,350 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #000000;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ffffff;
+  position: relative;
+  overflow-x: hidden;
+  /* 深色径向渐变背景 - 中心柔和光线，边缘变暗，带细微纹理 */
+  /* 如果你有背景图片，取消下面的注释并替换为你的图片路径 */
+  /*
+  background-image: url('/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  */
+  
+  /* CSS 创建的深色径向渐变背景效果 */
+  background: #000000;
+  background-image: 
+    /* 细微的噪点纹理（film grain 效果）- 使用多个层叠创建随机感 */
+    repeating-radial-gradient(circle at 20% 30%, transparent 0, rgba(255, 255, 255, 0.015) 0.5px, transparent 1px, rgba(255, 255, 255, 0.008) 1.5px, transparent 2px),
+    repeating-radial-gradient(circle at 80% 70%, transparent 0, rgba(255, 255, 255, 0.012) 0.5px, transparent 1px, rgba(255, 255, 255, 0.006) 1.5px, transparent 2px),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255, 255, 255, 0.01) 0.5px, transparent 1px),
+    /* 径向渐变：中心柔和灰色光线，边缘纯黑 - 更明显的对比 */
+    radial-gradient(ellipse at center, 
+      rgba(70, 70, 70, 0.8) 0%, 
+      rgba(50, 50, 50, 0.5) 15%, 
+      rgba(30, 30, 30, 0.3) 30%, 
+      rgba(15, 15, 15, 0.15) 50%, 
+      rgba(5, 5, 5, 0.05) 70%, 
+      #000000 100%);
+  background-size: 400% 400%, 350% 350%, 300% 300%, 100% 100%;
+  background-position: 20% 30%, 80% 70%, 50% 50%, center;
+}
+
+.container {
+  max-width: 600px;
+  width: 90%;
+  padding: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+h1 {
+  color: #ffffff;
+  text-align: center;
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  text-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.5),
+    0 0 20px rgba(255, 255, 255, 0.3),
+    2px 2px 0px rgba(0, 0, 0, 0.8);
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+/* 像素边框效果 */
+.card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    transparent 100%
+  );
+  z-index: -1;
+  opacity: 0.3;
+}
+
+.connected {
+  color: #4caf50;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(76, 175, 80, 0.15);
+  border: 2px solid rgba(76, 175, 80, 0.4);
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.9rem;
+  box-shadow: 
+    inset 0 0 10px rgba(76, 175, 80, 0.2),
+    0 0 10px rgba(76, 175, 80, 0.1);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Shake animation for invalid input */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+input[type="number"] {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  color: #ffffff;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+input[type="number"].shake {
+  animation: shake 0.5s;
+  border-color: #f44336 !important;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 
+    0 0 15px rgba(255, 255, 255, 0.2),
+    inset 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+input[type="number"]::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+input[type="number"]:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button {
+  padding: 1rem 2rem;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+button:hover::before {
+  left: 100%;
+}
+
+.connect-button {
+  width: 100%;
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-size: 1.1rem;
+  padding: 1.25rem;
+  font-weight: 900;
+  box-shadow: 
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 8px 20px rgba(255, 255, 255, 0.2);
+}
+
+.connect-button:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 rgba(0, 0, 0, 0.3),
+    0 4px 15px rgba(255, 255, 255, 0.3);
+}
+
+.verify-button {
+  background: #4caf50;
+  color: #ffffff;
+  border-color: #45a049;
+  font-weight: 900;
+  box-shadow: 
+    0 4px 0 rgba(45, 160, 73, 0.5),
+    0 8px 20px rgba(76, 175, 80, 0.3);
+}
+
+.verify-button:hover:not(:disabled) {
+  background: #45a049;
+  transform: translateY(2px);
+  box-shadow: 
+    0 2px 0 rgba(45, 160, 73, 0.5),
+    0 4px 15px rgba(76, 175, 80, 0.4);
+}
+
+.verify-button:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.result {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  border: 2px solid;
+}
+
+.result.success {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.6);
+  box-shadow: 
+    inset 0 0 20px rgba(76, 175, 80, 0.2),
+    0 0 20px rgba(76, 175, 80, 0.3);
+}
+
+.result.failure {
+  background: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.6);
+  box-shadow: 
+    inset 0 0 20px rgba(244, 67, 54, 0.2),
+    0 0 20px rgba(244, 67, 54, 0.3);
+}
+
+.result h2 {
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.result p {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.result.success p {
+  color: #4caf50;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.result.failure p {
+  color: #f44336;
+  text-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+.error {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(244, 67, 54, 0.15);
+  border: 2px solid rgba(244, 67, 54, 0.6);
+  border-radius: 8px;
+  color: #f44336;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: inset 0 0 10px rgba(244, 67, 54, 0.2);
+}
+
+.info {
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.info p {
+  margin: 0.5rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
