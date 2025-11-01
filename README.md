@@ -204,7 +204,7 @@ Before you begin, ensure you have:
 
 #### Step 1: Clone the Repository
 
-```bash
+   ```bash
 git clone https://github.com/Markssssssss/VeriSafe.git
 cd VeriSafe
 ```
@@ -214,8 +214,8 @@ cd VeriSafe
 **Backend (Root Directory):**
 ```bash
 # Install Hardhat and contract dependencies
-npm install
-```
+   npm install
+   ```
 
 **Frontend:**
 ```bash
@@ -233,18 +233,18 @@ cd ..
 
 Configure Hardhat environment variables for deployment:
 
-```bash
+   ```bash
 # Set your wallet mnemonic (for deploying contracts)
-npx hardhat vars set MNEMONIC
+   npx hardhat vars set MNEMONIC
 
 # Set your Alchemy API key (or Infura)
 npx hardhat vars set ALCHEMY_API_KEY
 # OR
-npx hardhat vars set INFURA_API_KEY
+   npx hardhat vars set INFURA_API_KEY
 
-# Optional: Set Etherscan API key for contract verification
-npx hardhat vars set ETHERSCAN_API_KEY
-```
+   # Optional: Set Etherscan API key for contract verification
+   npx hardhat vars set ETHERSCAN_API_KEY
+   ```
 
 **Note**: 
 - `MNEMONIC`: Your wallet's 12-word seed phrase (keep this secret!)
@@ -253,9 +253,9 @@ npx hardhat vars set ETHERSCAN_API_KEY
 
 #### Step 4: Compile Smart Contracts
 
-```bash
+   ```bash
 # Compile VeriSafe contract
-npm run compile
+   npm run compile
 
 # Expected output:
 # Compiled 2 Solidity files successfully
@@ -344,12 +344,12 @@ You need Sepolia ETH to pay for gas fees. Get free testnet ETH from:
 
 #### Test on Local Hardhat Network
 
-```bash
+   ```bash
 # Start local Hardhat node
-npx hardhat node
+   npx hardhat node
 
 # In another terminal, deploy to localhost
-npx hardhat deploy --network localhost
+   npx hardhat deploy --network localhost
 
 # Update frontend/src/App.tsx with localhost contract address
 # Start frontend (MetaMask needs to be on Localhost:8545)
@@ -399,7 +399,7 @@ npm run build
 
 ### Backend (Root Directory)
 
-```bash
+   ```bash
 # Compile smart contracts
 npm run compile
 
@@ -413,8 +413,8 @@ npm run coverage
 npx hardhat node
 npx hardhat deploy --network localhost
 
-# Deploy to Sepolia
-npx hardhat deploy --network sepolia
+   # Deploy to Sepolia
+   npx hardhat deploy --network sepolia
 
 # Clean build artifacts
 npm run clean
@@ -425,7 +425,7 @@ npm run lint
 
 ### Frontend
 
-```bash
+   ```bash
 cd frontend
 
 # Start development server

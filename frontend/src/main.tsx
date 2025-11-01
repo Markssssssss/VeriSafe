@@ -28,8 +28,8 @@ try {
   console.log('Initializing VeriSafe app...');
   const root = createRoot(rootElement);
   root.render(
-    <StrictMode>
-      <App />
+  <StrictMode>
+    <App />
     </StrictMode>
   );
   console.log('VeriSafe app initialized successfully');
