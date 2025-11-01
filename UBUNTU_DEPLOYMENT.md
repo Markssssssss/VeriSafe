@@ -1,5 +1,9 @@
 # Ubuntu Server Deployment Guide
 
+> **新手推荐**: 请先查看 [完整部署指南](./UBUNTU_DEPLOYMENT_COMPLETE.md)，包含详细的步骤说明和故障排查。
+> 
+> **快速部署**: 可以使用 [一键部署脚本](./deploy-ubuntu.sh) 自动完成大部分步骤。
+
 ## Prerequisites
 
 - Ubuntu 20.04 or higher

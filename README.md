@@ -393,6 +393,12 @@ npm run build
 # Deploy the dist/ folder to your hosting service
 ```
 
+#### 🖥️ Server Deployment Guides
+
+- **[Ubuntu 服务器部署指南](./部署指南-快速开始.md)** - 在 Ubuntu 服务器上部署（推荐）
+- **[完整部署指南](./UBUNTU_DEPLOYMENT_COMPLETE.md)** - 详细的步骤说明和故障排查
+- **[Vercel 部署指南](./DEPLOYMENT_GUIDE.md)** - 云端部署（无需服务器）
+
 ---
 
 ## 📋 Available Scripts
