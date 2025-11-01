@@ -60,13 +60,48 @@ h1 {
   text-align: center;
   font-size: 4rem;
   font-weight: 900;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   margin-bottom: 0.5rem;
+  /* Neon glow effect - multi-layer shadows for realistic glow */
   text-shadow: 
-    0 0 10px rgba(255, 255, 255, 0.5),
-    0 0 20px rgba(255, 255, 255, 0.3),
-    2px 2px 0px rgba(0, 0, 0, 0.8);
+    0 0 5px #ffffff,
+    0 0 10px #ffffff,
+    0 0 15px #ffffff,
+    0 0 20px rgba(255, 255, 255, 0.8),
+    0 0 35px rgba(255, 255, 255, 0.6),
+    0 0 40px rgba(255, 255, 255, 0.4),
+    0 0 50px rgba(255, 255, 255, 0.2),
+    2px 2px 0px rgba(0, 0, 0, 0.9);
+  /* Subtle animation for a more dynamic feel */
+  animation: glow-pulse 3s ease-in-out infinite;
+  position: relative;
+}
+
+/* Subtle pulse animation for the glow effect */
+@keyframes glow-pulse {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px #ffffff,
+      0 0 10px #ffffff,
+      0 0 15px #ffffff,
+      0 0 20px rgba(255, 255, 255, 0.8),
+      0 0 35px rgba(255, 255, 255, 0.6),
+      0 0 40px rgba(255, 255, 255, 0.4),
+      0 0 50px rgba(255, 255, 255, 0.2),
+      2px 2px 0px rgba(0, 0, 0, 0.9);
+  }
+  50% {
+    text-shadow: 
+      0 0 7px #ffffff,
+      0 0 12px #ffffff,
+      0 0 17px #ffffff,
+      0 0 22px rgba(255, 255, 255, 0.9),
+      0 0 37px rgba(255, 255, 255, 0.7),
+      0 0 42px rgba(255, 255, 255, 0.5),
+      0 0 52px rgba(255, 255, 255, 0.3),
+      2px 2px 0px rgba(0, 0, 0, 0.9);
+  }
 }
 
 .subtitle {
