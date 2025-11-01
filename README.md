@@ -393,9 +393,8 @@ npm run build
 # Deploy the dist/ folder to your hosting service
 ```
 
-#### 🖥️ Server Deployment Guides
+#### 🖥️ Deployment Guide
 
-- **[Ubuntu Deployment Guide](./UBUNTU_DEPLOYMENT.md)** - Deploy on Ubuntu server (recommended)
 - **[Vercel Deployment Guide](./DEPLOYMENT_GUIDE.md)** - Cloud deployment (no server required)
 
 ---
