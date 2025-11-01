@@ -57,7 +57,7 @@ const config: HardhatUserConfig = {
       chainId: 11155111,
       url: ALCHEMY_API_KEY 
         ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
-        : "https://rpc.sepolia.org", // 如果没有设置 Alchemy API Key，使用公共端点
+        : "https://rpc.sepolia.org", // Fallback to public RPC endpoint if Alchemy API Key is not set
     },
   },
   paths: {
