@@ -23,3 +23,8 @@ tmp
 coverage.json
 pnpm-lock.yaml
 yarn.lock
+
+# 部署教程文件（避免提交到仓库）
+*部署教程.md
+*DEPLOYMENT_TUTORIAL*.md
+UBUNTU*.md

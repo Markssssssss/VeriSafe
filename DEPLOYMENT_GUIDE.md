@@ -53,7 +53,8 @@ After deployment, Vercel will display:
 
 ```bash
 # In VeriSafe-Final directory
-cd /Users/mark/Desktop/cursor/zama/VeriSafe-Final
+# Navigate to your project directory (replace with your actual path)
+cd /path/to/VeriSafe/VeriSafe-Final
 
 # Initialize Git (if not already done)
 git init
@@ -68,7 +69,9 @@ git add .
 git commit -m "Initial commit: VeriSafe MVP"
 
 # Create new repository on GitHub, then push
-git remote add origin https://github.com/YOUR_USERNAME/verisafe.git
+# If you're forking this project, you can skip the git init/add/commit steps
+# and just set up your remote:
+git remote add origin https://github.com/Markssssssss/VeriSafe.git
 git branch -M main
 git push -u origin main
 ```
