@@ -9,6 +9,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Polyfill for 'module' - must be before any other scripts -->
+    <script>
+      // Define module polyfill for CommonJS compatibility (needed by relayer-sdk)
+      if (typeof module === 'undefined') {
+        window.module = { exports: {} };
+      }
+      if (typeof globalThis !== 'undefined' && typeof globalThis.module === 'undefined') {
+        globalThis.module = { exports: {} };
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
