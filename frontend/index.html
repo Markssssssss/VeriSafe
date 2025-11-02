@@ -56,15 +56,38 @@
         }
         
         // Define require polyfill - Create a proper base class that can be extended
+        // Create a minimal EventEmitter-like base class (stream modules often extend EventEmitter)
         function BaseNodeModule() {
-          // Make it a valid constructor
+          // Empty constructor - can be extended
         }
+        
+        // Set up proper prototype chain for inheritance
         BaseNodeModule.prototype = Object.create(Object.prototype);
         BaseNodeModule.prototype.constructor = BaseNodeModule;
         
+        // Add a method to make it look more like a real Node.js module
+        BaseNodeModule.prototype.on = function() { return this; };
+        BaseNodeModule.prototype.emit = function() { return this; };
+        BaseNodeModule.prototype.pipe = function() { return this; };
+        
         // Ensure it's a proper Function that can be extended
-        if (!(BaseNodeModule instanceof Function)) {
-          Object.setPrototypeOf(BaseNodeModule, Function.prototype);
+        // This is critical for "class X extends BaseNodeModule" to work
+        if (typeof BaseNodeModule !== 'function') {
+          // Fallback: create a new function
+          var func = function() {};
+          func.prototype = BaseNodeModule.prototype;
+          BaseNodeModule = func;
+        }
+        
+        // Ensure BaseNodeModule is a proper constructor that can be extended
+        // Test if it can be extended (silently, don't throw)
+        try {
+          eval('class __TestExtends__ extends BaseNodeModule {}');
+        } catch (e) {
+          // If extension fails, recreate BaseNodeModule as a proper function
+          var NewBaseNodeModule = function() {};
+          NewBaseNodeModule.prototype = BaseNodeModule.prototype;
+          BaseNodeModule = NewBaseNodeModule;
         }
         
         // Create require function with cache support
