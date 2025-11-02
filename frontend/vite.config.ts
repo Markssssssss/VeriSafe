@@ -23,14 +23,18 @@ export default defineConfig({
         process: true
       },
       // Explicitly enable stream polyfills for relayer-sdk
+      // Use readable-stream as the polyfill source
       include: [
         'stream',
+        'readable-stream',
         '_stream_readable',
         '_stream_writable',
         '_stream_duplex',
         '_stream_transform',
         '_stream_passthrough'
-      ]
+      ],
+      // Ensure stream modules are properly resolved
+      exclude: []
     }),
     // Custom plugin to handle WASM file serving from node_modules
     {
@@ -143,6 +147,11 @@ export default defineConfig({
       {
         find: 'fetch-retry',
         replacement: path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
+      },
+      // Resolve stream to readable-stream polyfill
+      {
+        find: /^stream$/,
+        replacement: 'readable-stream'
       }
     ],
     // Ensure proper resolution of keccak package  
