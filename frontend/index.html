@@ -55,124 +55,99 @@
           } catch (e) {}
         }
         
-        // Define require polyfill - Create a proper base class that can be extended
-        // Create a minimal EventEmitter-like base class (stream modules often extend EventEmitter)
-        function BaseNodeModule() {
-          // Empty constructor - can be extended
+        // Create a minimal EventEmitter class that can be extended
+        function EventEmitter() {
+          this._events = {};
         }
+        EventEmitter.prototype.on = function(event, listener) {
+          if (!this._events[event]) this._events[event] = [];
+          this._events[event].push(listener);
+          return this;
+        };
+        EventEmitter.prototype.emit = function(event) {
+          var args = Array.prototype.slice.call(arguments, 1);
+          if (this._events[event]) {
+            this._events[event].forEach(function(listener) {
+              listener.apply(this, args);
+            }.bind(this));
+          }
+          return this;
+        };
+        EventEmitter.prototype.pipe = function(dest) {
+          return dest;
+        };
         
-        // Set up proper prototype chain for inheritance
-        BaseNodeModule.prototype = Object.create(Object.prototype);
-        BaseNodeModule.prototype.constructor = BaseNodeModule;
-        
-        // Add a method to make it look more like a real Node.js module
-        BaseNodeModule.prototype.on = function() { return this; };
-        BaseNodeModule.prototype.emit = function() { return this; };
-        BaseNodeModule.prototype.pipe = function() { return this; };
-        
-        // Ensure it's a proper Function that can be extended
-        // This is critical for "class X extends BaseNodeModule" to work
-        if (typeof BaseNodeModule !== 'function') {
-          // Fallback: create a new function
-          var func = function() {};
-          func.prototype = BaseNodeModule.prototype;
-          BaseNodeModule = func;
+        // Create stream base classes that extend EventEmitter
+        function Readable() {
+          EventEmitter.call(this);
         }
+        Readable.prototype = Object.create(EventEmitter.prototype);
+        Readable.prototype.constructor = Readable;
         
-        // Ensure BaseNodeModule is a proper constructor that can be extended
-        // Test if it can be extended (silently, don't throw)
-        try {
-          eval('class __TestExtends__ extends BaseNodeModule {}');
-        } catch (e) {
-          // If extension fails, recreate BaseNodeModule as a proper function
-          var NewBaseNodeModule = function() {};
-          NewBaseNodeModule.prototype = BaseNodeModule.prototype;
-          BaseNodeModule = NewBaseNodeModule;
+        function Writable() {
+          EventEmitter.call(this);
         }
+        Writable.prototype = Object.create(EventEmitter.prototype);
+        Writable.prototype.constructor = Writable;
         
-        // Create require function with cache support
-        function createRequirePolyfill() {
-          var cache = {};
+        function Duplex() {
+          EventEmitter.call(this);
+        }
+        Duplex.prototype = Object.create(EventEmitter.prototype);
+        Duplex.prototype.constructor = Duplex;
+        
+        function Transform() {
+          EventEmitter.call(this);
+        }
+        Transform.prototype = Object.create(EventEmitter.prototype);
+        Transform.prototype.constructor = Transform;
+        
+        function PassThrough() {
+          EventEmitter.call(this);
+        }
+        PassThrough.prototype = Object.create(EventEmitter.prototype);
+        PassThrough.prototype.constructor = PassThrough;
+        
+        // Create a require() function that returns appropriate modules
+        var requireCache = {};
+        function requirePolyfill(id) {
+          if (requireCache[id]) return requireCache[id];
           
-          // Create a stream-like module with common exports
-          function createStreamModule() {
-            var streamModule = Object.create(BaseNodeModule.prototype);
-            streamModule.constructor = BaseNodeModule;
-            
-            // Add common stream exports (these are typically constructors themselves)
-            streamModule.Readable = BaseNodeModule;
-            streamModule.Writable = BaseNodeModule;
-            streamModule.Duplex = BaseNodeModule;
-            streamModule.Transform = BaseNodeModule;
-            streamModule.PassThrough = BaseNodeModule;
-            streamModule.Stream = BaseNodeModule;
-            streamModule.pipeline = function() { return this; };
-            
-            // Make the module itself callable (some code might use it as a function)
-            var callable = function() { return streamModule; };
-            Object.setPrototypeOf(callable, streamModule);
-            for (var key in streamModule) {
-              if (streamModule.hasOwnProperty(key)) {
-                callable[key] = streamModule[key];
-              }
-            }
-            
-            return callable;
+          var normalizedId = String(id || '').replace(/\.js$/, '');
+          
+          // Return stream module with proper constructors
+          if (normalizedId.includes('stream') || normalizedId.includes('_stream') || normalizedId === 'stream') {
+            console.log('require() polyfill: returning stream module for', id);
+            var streamModule = {
+              Readable: Readable,
+              Writable: Writable,
+              Duplex: Duplex,
+              Transform: Transform,
+              PassThrough: PassThrough,
+              Stream: EventEmitter,
+              EventEmitter: EventEmitter
+            };
+            requireCache[id] = streamModule;
+            return streamModule;
           }
           
-          var requireFn = function(id) {
-            // Normalize the module ID
-            var normalizedId = String(id || '').replace(/\.js$/, '');
-            var isStreamModule = normalizedId.includes('stream') || 
-                                 normalizedId.includes('_stream') || 
-                                 normalizedId.includes('/streams/') ||
-                                 normalizedId === 'stream';
-            
-            if (isStreamModule) {
-              console.warn('require() called for stream module:', id, '- Returning stream module stub');
-            } else {
-              console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
-            }
-            
-            // Use cache to ensure consistency
-            if (!cache[id]) {
-              if (isStreamModule) {
-                cache[id] = createStreamModule();
-              } else {
-                cache[id] = BaseNodeModule;
-              }
-            }
-            return cache[id];
-          };
-          
-          // Add cache property
-          requireFn.cache = cache;
-          requireFn.resolve = function(id) { return id; };
-          
-          return requireFn;
+          // For other modules, return EventEmitter as a fallback
+          console.warn('require() polyfill: returning EventEmitter for', id);
+          requireCache[id] = EventEmitter;
+          return EventEmitter;
         }
+        requirePolyfill.cache = requireCache;
+        requirePolyfill.resolve = function(id) { return id; };
         
-        // Set up require on all possible global objects
-        var requireFn = createRequirePolyfill();
-        
+        // Set up require if not already defined
         if (typeof require === 'undefined') {
           try {
-            window.require = requireFn;
-          } catch (e) {}
-          try {
-            if (typeof globalThis !== 'undefined') {
-              globalThis.require = requireFn;
-            }
-          } catch (e) {}
-          try {
-            if (typeof global !== 'undefined') {
-              global.require = requireFn;
-            }
-          } catch (e) {}
-          // Also set it on this context
-          try {
-            this.require = requireFn;
-          } catch (e) {}
+            window.require = requirePolyfill;
+            if (typeof globalThis !== 'undefined') globalThis.require = requirePolyfill;
+            if (typeof global !== 'undefined') global.require = requirePolyfill;
+          } catch (e) {
+            console.error('Failed to set up require() polyfill:', e);
+          }
         }
       })();
     </script>

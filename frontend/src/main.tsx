@@ -26,32 +26,56 @@ if (typeof module === 'undefined') {
   }
 }
 if (typeof require === 'undefined') {
-  // Create a base class that can be extended
-  function BaseNodeModule() {}
-  BaseNodeModule.prototype = {
-    on: function() { return this; },
-    emit: function() { return this; },
-    pipe: function() { return this; }
+  // Backup polyfill - create minimal EventEmitter-based constructors
+  function EventEmitter(this: any) {
+    this._events = {};
+  }
+  EventEmitter.prototype.on = function(event: string, listener: Function) {
+    if (!this._events[event]) this._events[event] = [];
+    this._events[event].push(listener);
+    return this;
   };
-  Object.setPrototypeOf(BaseNodeModule, Function.prototype);
+  EventEmitter.prototype.emit = function(event: string, ...args: any[]) {
+    if (this._events[event]) {
+      this._events[event].forEach((listener: Function) => listener.apply(this, args));
+    }
+    return this;
+  };
+  EventEmitter.prototype.pipe = function(dest: any) { return dest; };
   
-  // Create stream-like module
-  const createStreamModule = () => {
-    const mod: any = BaseNodeModule;
-    mod.Readable = BaseNodeModule;
-    mod.Writable = BaseNodeModule;
-    mod.Duplex = BaseNodeModule;
-    mod.Transform = BaseNodeModule;
-    mod.PassThrough = BaseNodeModule;
-    mod.Stream = BaseNodeModule;
-    return mod;
+  // Create stream constructors
+  const createStreamConstructor = (name: string) => {
+    const ctor = function(this: any) {
+      EventEmitter.call(this);
+    };
+    ctor.prototype = Object.create(EventEmitter.prototype);
+    ctor.prototype.constructor = ctor;
+    return ctor;
   };
   
-  // Universal require implementation
+  const Readable = createStreamConstructor('Readable');
+  const Writable = createStreamConstructor('Writable');
+  const Duplex = createStreamConstructor('Duplex');
+  const Transform = createStreamConstructor('Transform');
+  const PassThrough = createStreamConstructor('PassThrough');
+  
+  // @ts-ignore
   const requireImpl = function(id: string) {
     const isStream = id.includes('stream') || id.includes('_stream');
-    console.warn('require() called for:', id, isStream ? '- Returning stream stub' : '- Returning BaseNodeModule');
-    return isStream ? createStreamModule() : BaseNodeModule;
+    if (isStream) {
+      console.log('require() backup polyfill: returning stream module for', id);
+      return {
+        Readable,
+        Writable,
+        Duplex,
+        Transform,
+        PassThrough,
+        Stream: EventEmitter,
+        EventEmitter
+      };
+    }
+    console.warn('require() backup polyfill: returning EventEmitter for', id);
+    return EventEmitter;
   };
   requireImpl.cache = {};
   
