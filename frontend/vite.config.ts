@@ -44,11 +44,10 @@ export default defineConfig({
             const filename = req.url.split('/').pop() || req.url.split('/').slice(-1)[0];
             const wasmPath = req.url.replace(/^\//, '').replace(/^\/@fs\//, ''); // Remove leading slash and @fs prefix
             
-            // Common WASM filenames from relayer-sdk
+            // Common WASM filenames from relayer-sdk (v0.3.0-3)
             const wasmFiles: Record<string, string> = {
-              'kms_lib_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms/kms_lib_bg.wasm',
-              'tfhe_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe/tfhe_bg.wasm',
-              'node-tfhe_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/node_modules/node-tfhe/tfhe_bg.wasm',
+              'kms_lib_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/bundle/kms_lib_bg.wasm',
+              'tfhe_bg.wasm': 'node_modules/@zama-fhe/relayer-sdk/bundle/tfhe_bg.wasm',
             };
             
             const possiblePaths = [
@@ -60,10 +59,9 @@ export default defineConfig({
               path.resolve(__dirname, 'node_modules', wasmPath),
               // Try from relayer-sdk
               path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk', wasmPath),
-              // Try specific known locations
-              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms', filename || ''),
-              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe', filename || ''),
-              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/node_modules/node-tfhe', filename || ''),
+              // Try specific known locations (v0.3.0-3 paths)
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/bundle', filename || ''),
+              path.resolve(__dirname, 'node_modules/@zama-fhe/relayer-sdk/lib', filename || ''),
               // Try without node_modules prefix (in case path already includes it)
               wasmPath.startsWith('node_modules/') ? path.resolve(__dirname, wasmPath) : null,
             ].filter((p): p is string => p !== null && p !== '');
@@ -105,15 +103,15 @@ export default defineConfig({
         });
       }
     },
-    // Copy WASM files to public directory during build
+    // Copy WASM files to assets directory during build (v0.3.0-3 paths)
     viteStaticCopy({
       targets: [
         {
-          src: 'node_modules/@zama-fhe/relayer-sdk/node_modules/tkms/kms_lib_bg.wasm',
+          src: 'node_modules/@zama-fhe/relayer-sdk/bundle/kms_lib_bg.wasm',
           dest: 'assets'
         },
         {
-          src: 'node_modules/@zama-fhe/relayer-sdk/node_modules/tfhe/tfhe_bg.wasm',
+          src: 'node_modules/@zama-fhe/relayer-sdk/bundle/tfhe_bg.wasm',
           dest: 'assets'
         }
       ]
