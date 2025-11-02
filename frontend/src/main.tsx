@@ -44,7 +44,7 @@ if (typeof require === 'undefined') {
   EventEmitter.prototype.pipe = function(dest: any) { return dest; };
   
   // Create stream constructors
-  const createStreamConstructor = (name: string) => {
+  const createStreamConstructor = () => {
     const ctor = function(this: any) {
       EventEmitter.call(this);
     };
@@ -53,11 +53,11 @@ if (typeof require === 'undefined') {
     return ctor;
   };
   
-  const Readable = createStreamConstructor('Readable');
-  const Writable = createStreamConstructor('Writable');
-  const Duplex = createStreamConstructor('Duplex');
-  const Transform = createStreamConstructor('Transform');
-  const PassThrough = createStreamConstructor('PassThrough');
+  const Readable = createStreamConstructor();
+  const Writable = createStreamConstructor();
+  const Duplex = createStreamConstructor();
+  const Transform = createStreamConstructor();
+  const PassThrough = createStreamConstructor();
   
   // @ts-ignore
   const requireImpl = function(id: string) {
