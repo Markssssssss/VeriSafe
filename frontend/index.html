@@ -55,9 +55,71 @@
           } catch (e) {}
         }
         
-        // DO NOT define require() here - let vite-plugin-node-polyfills handle it
-        // The plugin will provide proper stream polyfills with correct prototype chains
-        console.log('[VeriSafe Init] CommonJS globals (module, exports) are now defined. Vite will handle require().');
+        // Define require() polyfill
+        // vite-plugin-node-polyfills only handles build-time transforms, not runtime require()
+        if (typeof require === 'undefined') {
+          console.log('[VeriSafe Init] Defining require() polyfill for runtime use');
+          
+          // Create a minimal EventEmitter-like base
+          function StreamBase() {
+            this._events = this._events || {};
+          }
+          StreamBase.prototype.on = function(event, handler) {
+            if (!this._events[event]) this._events[event] = [];
+            this._events[event].push(handler);
+            return this;
+          };
+          StreamBase.prototype.emit = function(event) {
+            var handlers = this._events[event];
+            if (handlers) {
+              var args = Array.prototype.slice.call(arguments, 1);
+              for (var i = 0; i < handlers.length; i++) {
+                handlers[i].apply(this, args);
+              }
+            }
+            return this;
+          };
+          StreamBase.prototype.pipe = function(dest) { return dest; };
+          StreamBase.prototype.read = function() { return null; };
+          StreamBase.prototype.write = function() { return true; };
+          
+          // Create the require function
+          var moduleCache = {};
+          window.require = globalThis.require = function(moduleId) {
+            // Return cached module if available
+            if (moduleCache[moduleId]) {
+              return moduleCache[moduleId];
+            }
+            
+            // Check if it's a stream module
+            var isStream = moduleId.indexOf('stream') !== -1 || moduleId.indexOf('_stream') !== -1;
+            
+            if (isStream) {
+              // Return a stream-like module with constructors
+              var streamExports = {
+                Readable: StreamBase,
+                Writable: StreamBase,
+                Duplex: StreamBase,
+                Transform: StreamBase,
+                PassThrough: StreamBase,
+                Stream: StreamBase
+              };
+              moduleCache[moduleId] = streamExports;
+              console.log('[require] Returning stream polyfill for:', moduleId);
+              return streamExports;
+            }
+            
+            // For non-stream modules, return a generic base
+            console.warn('[require] Returning StreamBase for unknown module:', moduleId);
+            moduleCache[moduleId] = StreamBase;
+            return StreamBase;
+          };
+          
+          window.require.cache = moduleCache;
+          window.require.resolve = function(id) { return id; };
+        } else {
+          console.log('[VeriSafe Init] require() already defined');
+        }
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>

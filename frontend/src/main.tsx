@@ -25,9 +25,54 @@ if (typeof module === 'undefined') {
     (globalThis as any).exports = (globalThis as any).module.exports;
   }
 }
-// DO NOT define require() here - let vite-plugin-node-polyfills handle it
-// The plugin will provide proper stream polyfills with correct prototype chains
-console.log('[VeriSafe Main] Module and exports are defined. Vite will handle require().');
+// Backup require() polyfill (in case index.html script didn't run)
+if (typeof require === 'undefined') {
+  console.log('[VeriSafe Main] Defining backup require() polyfill');
+  
+  function StreamBase(this: any) {
+    this._events = this._events || {};
+  }
+  StreamBase.prototype.on = function(event: string, handler: Function) {
+    if (!this._events[event]) this._events[event] = [];
+    this._events[event].push(handler);
+    return this;
+  };
+  StreamBase.prototype.emit = function(event: string, ...args: any[]) {
+    const handlers = this._events[event];
+    if (handlers) {
+      handlers.forEach((h: Function) => h.apply(this, args));
+    }
+    return this;
+  };
+  StreamBase.prototype.pipe = function(dest: any) { return dest; };
+  
+  const moduleCache: Record<string, any> = {};
+  // @ts-ignore
+  const requireFn = function(moduleId: string) {
+    if (moduleCache[moduleId]) return moduleCache[moduleId];
+    
+    const isStream = moduleId.includes('stream') || moduleId.includes('_stream');
+    if (isStream) {
+      const exports = {
+        Readable: StreamBase,
+        Writable: StreamBase,
+        Duplex: StreamBase,
+        Transform: StreamBase,
+        PassThrough: StreamBase,
+        Stream: StreamBase
+      };
+      moduleCache[moduleId] = exports;
+      return exports;
+    }
+    
+    moduleCache[moduleId] = StreamBase;
+    return StreamBase;
+  };
+  requireFn.cache = moduleCache;
+  
+  if (typeof window !== 'undefined') (window as any).require = requireFn;
+  if (typeof globalThis !== 'undefined') (globalThis as any).require = requireFn;
+}
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
