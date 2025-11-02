@@ -38,18 +38,40 @@
       }
       
       // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
+      // Create stub objects for common Node.js modules that might be required at runtime
+      var stubModules = {
+        'stream': function() { return {}; },
+        './lib/_stream_readable': function() { return {}; },
+        './lib/_stream_writable': function() { return {}; },
+        './lib/_stream_duplex': function() { return {}; },
+        './lib/_stream_transform': function() { return {}; },
+        './lib/_stream_passthrough': function() { return {}; },
+        './lib/internal/streams/end-of-stream': function() { return {}; },
+        './lib/internal/streams/pipeline': function() { return {}; }
+      };
+      
       if (typeof require === 'undefined') {
-        // Minimal require implementation - will be handled by Vite's module system
+        // Improved require implementation - returns stubs for known modules
         window.require = function(id) {
+          // Check if we have a stub for this module
+          if (stubModules[id]) {
+            console.warn('require() called for:', id, '- Using stub module');
+            return stubModules[id]();
+          }
+          // For unknown modules, return a minimal object to prevent "undefined" errors
           console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          // Return an empty object as fallback
-          return {};
+          // Return a minimal object that can be extended/inherited
+          return { default: {}, __esModule: true };
         };
       }
       if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
         globalThis.require = function(id) {
+          if (stubModules[id]) {
+            console.warn('require() called for:', id, '- Using stub module');
+            return stubModules[id]();
+          }
           console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          return {};
+          return { default: {}, __esModule: true };
         };
       }
     </script>
