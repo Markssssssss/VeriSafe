@@ -16,13 +16,11 @@ export default defineConfig({
   plugins: [
     react(), 
     nodePolyfills({
-      // Include polyfills for module and require which keccak needs
+      // Include polyfills which keccak needs
       globals: {
         Buffer: true,
         global: true,
-        process: true,
-        module: true,
-        require: true
+        process: true
       }
     }),
     // Custom plugin to handle WASM file serving from node_modules
@@ -127,7 +125,7 @@ export default defineConfig({
       {
         find: /^keccak$/,
         replacement: path.resolve(__dirname, 'src/keccak-wrapper.js'),
-        customResolver: (id, importer) => {
+        customResolver: (_id, importer) => {
           // Don't apply alias when importing from wrapper files
           if (importer && (importer.includes('keccak-real.js') || importer.includes('keccak-wrapper.js'))) {
             return null // Let Vite resolve to node_modules
