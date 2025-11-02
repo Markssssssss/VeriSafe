@@ -93,6 +93,33 @@
         // Create require function with cache support
         function createRequirePolyfill() {
           var cache = {};
+          
+          // Create a stream-like module with common exports
+          function createStreamModule() {
+            var streamModule = Object.create(BaseNodeModule.prototype);
+            streamModule.constructor = BaseNodeModule;
+            
+            // Add common stream exports (these are typically constructors themselves)
+            streamModule.Readable = BaseNodeModule;
+            streamModule.Writable = BaseNodeModule;
+            streamModule.Duplex = BaseNodeModule;
+            streamModule.Transform = BaseNodeModule;
+            streamModule.PassThrough = BaseNodeModule;
+            streamModule.Stream = BaseNodeModule;
+            streamModule.pipeline = function() { return this; };
+            
+            // Make the module itself callable (some code might use it as a function)
+            var callable = function() { return streamModule; };
+            Object.setPrototypeOf(callable, streamModule);
+            for (var key in streamModule) {
+              if (streamModule.hasOwnProperty(key)) {
+                callable[key] = streamModule[key];
+              }
+            }
+            
+            return callable;
+          }
+          
           var requireFn = function(id) {
             // Normalize the module ID
             var normalizedId = String(id || '').replace(/\.js$/, '');
@@ -102,15 +129,18 @@
                                  normalizedId === 'stream';
             
             if (isStreamModule) {
-              console.warn('require() called for stream module:', id, '- Using BaseNodeModule constructor');
+              console.warn('require() called for stream module:', id, '- Returning stream module stub');
             } else {
               console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
             }
             
-            // Always return the same constructor instance
             // Use cache to ensure consistency
             if (!cache[id]) {
-              cache[id] = BaseNodeModule;
+              if (isStreamModule) {
+                cache[id] = createStreamModule();
+              } else {
+                cache[id] = BaseNodeModule;
+              }
             }
             return cache[id];
           };

@@ -28,14 +28,30 @@ if (typeof module === 'undefined') {
 if (typeof require === 'undefined') {
   // Create a base class that can be extended
   function BaseNodeModule() {}
-  BaseNodeModule.prototype = {};
+  BaseNodeModule.prototype = {
+    on: function() { return this; },
+    emit: function() { return this; },
+    pipe: function() { return this; }
+  };
   Object.setPrototypeOf(BaseNodeModule, Function.prototype);
   
-  // Universal require implementation - always returns a valid constructor
+  // Create stream-like module
+  const createStreamModule = () => {
+    const mod: any = BaseNodeModule;
+    mod.Readable = BaseNodeModule;
+    mod.Writable = BaseNodeModule;
+    mod.Duplex = BaseNodeModule;
+    mod.Transform = BaseNodeModule;
+    mod.PassThrough = BaseNodeModule;
+    mod.Stream = BaseNodeModule;
+    return mod;
+  };
+  
+  // Universal require implementation
   const requireImpl = function(id: string) {
-    console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
-    // Always return the constructor - never undefined or null
-    return BaseNodeModule;
+    const isStream = id.includes('stream') || id.includes('_stream');
+    console.warn('require() called for:', id, isStream ? '- Returning stream stub' : '- Returning BaseNodeModule');
+    return isStream ? createStreamModule() : BaseNodeModule;
   };
   requireImpl.cache = {};
   
