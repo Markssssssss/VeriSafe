@@ -16,12 +16,21 @@ export default defineConfig({
   plugins: [
     react(), 
     nodePolyfills({
-      // Include polyfills which keccak needs
+      // Include polyfills which keccak and relayer-sdk need
       globals: {
         Buffer: true,
         global: true,
         process: true
-      }
+      },
+      // Explicitly enable stream polyfills for relayer-sdk
+      include: [
+        'stream',
+        '_stream_readable',
+        '_stream_writable',
+        '_stream_duplex',
+        '_stream_transform',
+        '_stream_passthrough'
+      ]
     }),
     // Custom plugin to handle WASM file serving from node_modules
     {
