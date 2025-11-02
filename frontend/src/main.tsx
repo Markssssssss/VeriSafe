@@ -1,4 +1,4 @@
-// Polyfill for 'module' if not defined (for relayer-sdk compatibility)
+// Polyfill for 'module' and 'require' if not defined (for relayer-sdk compatibility)
 // Note: This is a backup - the main polyfill is in index.html
 if (typeof module === 'undefined') {
   if (typeof window !== 'undefined') {
@@ -8,6 +8,21 @@ if (typeof module === 'undefined') {
   if (typeof globalThis !== 'undefined') {
     // @ts-ignore - We're creating a minimal module polyfill for browser compatibility
     (globalThis as any).module = { exports: {} };
+  }
+}
+if (typeof require === 'undefined') {
+  // Minimal require implementation - will be handled by Vite's module system
+  const requireImpl = function(id: string) {
+    console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
+    return {};
+  };
+  if (typeof window !== 'undefined') {
+    // @ts-ignore
+    (window as any).require = requireImpl;
+  }
+  if (typeof globalThis !== 'undefined') {
+    // @ts-ignore
+    (globalThis as any).require = requireImpl;
   }
 }
 

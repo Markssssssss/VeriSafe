@@ -9,7 +9,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Polyfill for 'module' - must be before any other scripts -->
+    <!-- Polyfill for 'module' and 'require' - must be before any other scripts -->
     <script>
       // Define module polyfill for CommonJS compatibility (needed by relayer-sdk)
       if (typeof module === 'undefined') {
@@ -17,6 +17,22 @@
       }
       if (typeof globalThis !== 'undefined' && typeof globalThis.module === 'undefined') {
         globalThis.module = { exports: {} };
+      }
+      
+      // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
+      if (typeof require === 'undefined') {
+        // Minimal require implementation - will be handled by Vite's module system
+        window.require = function(id) {
+          console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
+          // Return an empty object as fallback
+          return {};
+        };
+      }
+      if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
+        globalThis.require = function(id) {
+          console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
+          return {};
+        };
       }
     </script>
     <script type="module" src="/src/main.tsx"></script>
