@@ -38,40 +38,58 @@
       }
       
       // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
-      // Create stub objects for common Node.js modules that might be required at runtime
+      // Create a base class that can be extended (for stream modules)
+      function BaseStreamClass() {}
+      BaseStreamClass.prototype = {};
+      
+      // Create stub constructors for common Node.js modules that might be required at runtime
       var stubModules = {
-        'stream': function() { return {}; },
-        './lib/_stream_readable': function() { return {}; },
-        './lib/_stream_writable': function() { return {}; },
-        './lib/_stream_duplex': function() { return {}; },
-        './lib/_stream_transform': function() { return {}; },
-        './lib/_stream_passthrough': function() { return {}; },
-        './lib/internal/streams/end-of-stream': function() { return {}; },
-        './lib/internal/streams/pipeline': function() { return {}; }
+        'stream': BaseStreamClass,
+        './lib/_stream_readable': BaseStreamClass,
+        './lib/_stream_readable.js': BaseStreamClass,
+        './lib/_stream_writable': BaseStreamClass,
+        './lib/_stream_writable.js': BaseStreamClass,
+        './lib/_stream_duplex': BaseStreamClass,
+        './lib/_stream_duplex.js': BaseStreamClass,
+        './lib/_stream_transform': BaseStreamClass,
+        './lib/_stream_transform.js': BaseStreamClass,
+        './lib/_stream_passthrough': BaseStreamClass,
+        './lib/_stream_passthrough.js': BaseStreamClass,
+        './lib/internal/streams/end-of-stream': BaseStreamClass,
+        './lib/internal/streams/end-of-stream.js': BaseStreamClass,
+        './lib/internal/streams/pipeline': BaseStreamClass,
+        './lib/internal/streams/pipeline.js': BaseStreamClass
       };
       
       if (typeof require === 'undefined') {
-        // Improved require implementation - returns stubs for known modules
+        // Improved require implementation - returns constructors for known modules
         window.require = function(id) {
-          // Check if we have a stub for this module
-          if (stubModules[id]) {
-            console.warn('require() called for:', id, '- Using stub module');
-            return stubModules[id]();
+          // Remove .js extension for matching
+          var idWithoutExt = id.replace(/\.js$/, '');
+          
+          // Check if we have a stub for this module (with or without .js)
+          if (stubModules[id] || stubModules[idWithoutExt]) {
+            var stub = stubModules[id] || stubModules[idWithoutExt];
+            console.warn('require() called for:', id, '- Using stub constructor');
+            // Return the constructor itself (not call it)
+            return stub;
           }
-          // For unknown modules, return a minimal object to prevent "undefined" errors
+          // For unknown modules, return a constructor class that can be extended
           console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          // Return a minimal object that can be extended/inherited
-          return { default: {}, __esModule: true };
+          // Return a constructor that can be extended
+          return BaseStreamClass;
         };
       }
       if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
         globalThis.require = function(id) {
-          if (stubModules[id]) {
-            console.warn('require() called for:', id, '- Using stub module');
-            return stubModules[id]();
+          var idWithoutExt = id.replace(/\.js$/, '');
+          if (stubModules[id] || stubModules[idWithoutExt]) {
+            var stub = stubModules[id] || stubModules[idWithoutExt];
+            console.warn('require() called for:', id, '- Using stub constructor');
+            return stub;
           }
           console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          return { default: {}, __esModule: true };
+          return BaseStreamClass;
         };
       }
     </script>
