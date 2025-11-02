@@ -26,11 +26,19 @@ if (typeof module === 'undefined') {
   }
 }
 if (typeof require === 'undefined') {
-  // Minimal require implementation - will be handled by Vite's module system
+  // Create a base class that can be extended
+  function BaseNodeModule() {}
+  BaseNodeModule.prototype = {};
+  Object.setPrototypeOf(BaseNodeModule, Function.prototype);
+  
+  // Universal require implementation - always returns a valid constructor
   const requireImpl = function(id: string) {
-    console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-    return {};
+    console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
+    // Always return the constructor - never undefined or null
+    return BaseNodeModule;
   };
+  requireImpl.cache = {};
+  
   if (typeof window !== 'undefined') {
     // @ts-ignore
     (window as any).require = requireImpl;

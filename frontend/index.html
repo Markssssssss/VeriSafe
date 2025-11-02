@@ -38,59 +38,46 @@
       }
       
       // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
-      // Create a base class that can be extended (for stream modules)
-      function BaseStreamClass() {}
-      BaseStreamClass.prototype = {};
+      // Create a base class that can be extended (for stream modules and any Node.js modules)
+      function BaseNodeModule() {}
+      BaseNodeModule.prototype = {};
       
-      // Create stub constructors for common Node.js modules that might be required at runtime
-      var stubModules = {
-        'stream': BaseStreamClass,
-        './lib/_stream_readable': BaseStreamClass,
-        './lib/_stream_readable.js': BaseStreamClass,
-        './lib/_stream_writable': BaseStreamClass,
-        './lib/_stream_writable.js': BaseStreamClass,
-        './lib/_stream_duplex': BaseStreamClass,
-        './lib/_stream_duplex.js': BaseStreamClass,
-        './lib/_stream_transform': BaseStreamClass,
-        './lib/_stream_transform.js': BaseStreamClass,
-        './lib/_stream_passthrough': BaseStreamClass,
-        './lib/_stream_passthrough.js': BaseStreamClass,
-        './lib/internal/streams/end-of-stream': BaseStreamClass,
-        './lib/internal/streams/end-of-stream.js': BaseStreamClass,
-        './lib/internal/streams/pipeline': BaseStreamClass,
-        './lib/internal/streams/pipeline.js': BaseStreamClass
-      };
+      // Make it look like a proper class that can be extended
+      Object.setPrototypeOf(BaseNodeModule, Function.prototype);
       
-      if (typeof require === 'undefined') {
-        // Improved require implementation - returns constructors for known modules
-        window.require = function(id) {
-          // Remove .js extension for matching
-          var idWithoutExt = id.replace(/\.js$/, '');
+      // Create a universal require function that always returns a valid constructor
+      function createRequirePolyfill() {
+        return function(id) {
+          // Normalize the module ID (remove .js extension, handle relative paths)
+          var normalizedId = String(id || '').replace(/\.js$/, '');
           
-          // Check if we have a stub for this module (with or without .js)
-          if (stubModules[id] || stubModules[idWithoutExt]) {
-            var stub = stubModules[id] || stubModules[idWithoutExt];
-            console.warn('require() called for:', id, '- Using stub constructor');
-            // Return the constructor itself (not call it)
-            return stub;
+          // Check if this looks like a stream-related module
+          var isStreamModule = normalizedId.includes('stream') || 
+                               normalizedId.includes('_stream') || 
+                               normalizedId.includes('/streams/') ||
+                               normalizedId === 'stream';
+          
+          // For all modules, return a constructor that can be extended
+          if (isStreamModule) {
+            console.warn('require() called for stream module:', id, '- Using BaseNodeModule constructor');
+          } else {
+            console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
           }
-          // For unknown modules, return a constructor class that can be extended
-          console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          // Return a constructor that can be extended
-          return BaseStreamClass;
+          
+          // Always return the constructor - never undefined or null
+          return BaseNodeModule;
         };
       }
+      
+      // Set up require on window and globalThis
+      if (typeof require === 'undefined') {
+        window.require = createRequirePolyfill();
+        // Also set up require.cache for compatibility
+        window.require.cache = {};
+      }
       if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
-        globalThis.require = function(id) {
-          var idWithoutExt = id.replace(/\.js$/, '');
-          if (stubModules[id] || stubModules[idWithoutExt]) {
-            var stub = stubModules[id] || stubModules[idWithoutExt];
-            console.warn('require() called for:', id, '- Using stub constructor');
-            return stub;
-          }
-          console.warn('require() called for:', id, '- This should be handled by Vite\'s module system');
-          return BaseStreamClass;
-        };
+        globalThis.require = createRequirePolyfill();
+        globalThis.require.cache = {};
       }
     </script>
     <script type="module" src="/src/main.tsx"></script>
