@@ -145,10 +145,7 @@ export default defineConfig({
       {
         find: 'fetch-retry',
         replacement: path.resolve(__dirname, 'src/fetch-retry-wrapper.js')
-      },
-      // Ensure stream modules are resolved to polyfills
-      { find: 'stream', replacement: 'stream-browserify' },
-      { find: 'readable-stream', replacement: 'readable-stream' }
+      }
     ],
     // Ensure proper resolution of keccak package  
     conditions: ['browser', 'module', 'import', 'default']

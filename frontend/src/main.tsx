@@ -25,69 +25,9 @@ if (typeof module === 'undefined') {
     (globalThis as any).exports = (globalThis as any).module.exports;
   }
 }
-if (typeof require === 'undefined') {
-  // Backup polyfill - create minimal EventEmitter-based constructors
-  function EventEmitter(this: any) {
-    this._events = {};
-  }
-  EventEmitter.prototype.on = function(event: string, listener: Function) {
-    if (!this._events[event]) this._events[event] = [];
-    this._events[event].push(listener);
-    return this;
-  };
-  EventEmitter.prototype.emit = function(event: string, ...args: any[]) {
-    if (this._events[event]) {
-      this._events[event].forEach((listener: Function) => listener.apply(this, args));
-    }
-    return this;
-  };
-  EventEmitter.prototype.pipe = function(dest: any) { return dest; };
-  
-  // Create stream constructors
-  const createStreamConstructor = () => {
-    const ctor = function(this: any) {
-      EventEmitter.call(this);
-    };
-    ctor.prototype = Object.create(EventEmitter.prototype);
-    ctor.prototype.constructor = ctor;
-    return ctor;
-  };
-  
-  const Readable = createStreamConstructor();
-  const Writable = createStreamConstructor();
-  const Duplex = createStreamConstructor();
-  const Transform = createStreamConstructor();
-  const PassThrough = createStreamConstructor();
-  
-  // @ts-ignore
-  const requireImpl = function(id: string) {
-    const isStream = id.includes('stream') || id.includes('_stream');
-    if (isStream) {
-      console.log('require() backup polyfill: returning stream module for', id);
-      return {
-        Readable,
-        Writable,
-        Duplex,
-        Transform,
-        PassThrough,
-        Stream: EventEmitter,
-        EventEmitter
-      };
-    }
-    console.warn('require() backup polyfill: returning EventEmitter for', id);
-    return EventEmitter;
-  };
-  requireImpl.cache = {};
-  
-  if (typeof window !== 'undefined') {
-    // @ts-ignore
-    (window as any).require = requireImpl;
-  }
-  if (typeof globalThis !== 'undefined') {
-    // @ts-ignore
-    (globalThis as any).require = requireImpl;
-  }
-}
+// DO NOT define require() here - let vite-plugin-node-polyfills handle it
+// The plugin will provide proper stream polyfills with correct prototype chains
+console.log('[VeriSafe Main] Module and exports are defined. Vite will handle require().');
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
