@@ -1,13 +1,28 @@
-// Polyfill for 'module' and 'require' if not defined (for relayer-sdk compatibility)
+// Polyfill for CommonJS globals (module, exports, require) if not defined (for relayer-sdk compatibility)
 // Note: This is a backup - the main polyfill is in index.html
 if (typeof module === 'undefined') {
+  const moduleObj = { exports: {} };
   if (typeof window !== 'undefined') {
     // @ts-ignore - We're creating a minimal module polyfill for browser compatibility
-    (window as any).module = { exports: {} };
+    (window as any).module = moduleObj;
+    // @ts-ignore - exports should point to module.exports
+    (window as any).exports = moduleObj.exports;
   }
   if (typeof globalThis !== 'undefined') {
-    // @ts-ignore - We're creating a minimal module polyfill for browser compatibility
-    (globalThis as any).module = { exports: {} };
+    // @ts-ignore
+    (globalThis as any).module = moduleObj;
+    // @ts-ignore
+    (globalThis as any).exports = moduleObj.exports;
+  }
+} else {
+  // If module exists, ensure exports points to module.exports
+  if (typeof window !== 'undefined' && typeof (window as any).exports === 'undefined') {
+    // @ts-ignore
+    (window as any).exports = (window as any).module.exports;
+  }
+  if (typeof globalThis !== 'undefined' && typeof (globalThis as any).exports === 'undefined') {
+    // @ts-ignore
+    (globalThis as any).exports = (globalThis as any).module.exports;
   }
 }
 if (typeof require === 'undefined') {

@@ -9,14 +9,32 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Polyfill for 'module' and 'require' - must be before any other scripts -->
+    <!-- Polyfill for CommonJS globals (module, exports, require) - must be before any other scripts -->
     <script>
       // Define module polyfill for CommonJS compatibility (needed by relayer-sdk)
+      var moduleObj = { exports: {} };
       if (typeof module === 'undefined') {
-        window.module = { exports: {} };
+        window.module = moduleObj;
       }
       if (typeof globalThis !== 'undefined' && typeof globalThis.module === 'undefined') {
-        globalThis.module = { exports: {} };
+        globalThis.module = moduleObj;
+      }
+      
+      // Define exports - in CommonJS, exports is a reference to module.exports
+      if (typeof exports === 'undefined') {
+        // exports should point to module.exports
+        try {
+          window.exports = moduleObj.exports;
+        } catch (e) {
+          window.exports = {};
+        }
+      }
+      if (typeof globalThis !== 'undefined' && typeof globalThis.exports === 'undefined') {
+        try {
+          globalThis.exports = moduleObj.exports;
+        } catch (e) {
+          globalThis.exports = {};
+        }
       }
       
       // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
