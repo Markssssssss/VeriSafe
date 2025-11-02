@@ -1,13 +1,13 @@
 // Polyfill for 'module' if not defined (for relayer-sdk compatibility)
 // Note: This is a backup - the main polyfill is in index.html
 if (typeof module === 'undefined') {
-  // @ts-ignore
   if (typeof window !== 'undefined') {
-    window.module = { exports: {} };
+    // @ts-ignore - We're creating a minimal module polyfill for browser compatibility
+    (window as any).module = { exports: {} };
   }
-  // @ts-ignore
   if (typeof globalThis !== 'undefined') {
-    globalThis.module = { exports: {} };
+    // @ts-ignore - We're creating a minimal module polyfill for browser compatibility
+    (globalThis as any).module = { exports: {} };
   }
 }
 
