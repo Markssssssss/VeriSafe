@@ -11,74 +11,117 @@
     <div id="root"></div>
     <!-- Polyfill for CommonJS globals (module, exports, require) - must be before any other scripts -->
     <script>
-      // Define module polyfill for CommonJS compatibility (needed by relayer-sdk)
-      var moduleObj = { exports: {} };
-      if (typeof module === 'undefined') {
-        window.module = moduleObj;
-      }
-      if (typeof globalThis !== 'undefined' && typeof globalThis.module === 'undefined') {
-        globalThis.module = moduleObj;
-      }
-      
-      // Define exports - in CommonJS, exports is a reference to module.exports
-      if (typeof exports === 'undefined') {
-        // exports should point to module.exports
-        try {
-          window.exports = moduleObj.exports;
-        } catch (e) {
-          window.exports = {};
+      (function() {
+        'use strict';
+        
+        // Define module polyfill for CommonJS compatibility (needed by relayer-sdk)
+        var moduleObj = { exports: {} };
+        
+        // Set module on all possible global objects
+        if (typeof module === 'undefined') {
+          try {
+            window.module = moduleObj;
+          } catch (e) {}
+          try {
+            if (typeof globalThis !== 'undefined') {
+              globalThis.module = moduleObj;
+            }
+          } catch (e) {}
+          try {
+            if (typeof global !== 'undefined') {
+              global.module = moduleObj;
+            }
+          } catch (e) {}
+          // Also set it directly on the global scope
+          try {
+            this.module = moduleObj;
+          } catch (e) {}
         }
-      }
-      if (typeof globalThis !== 'undefined' && typeof globalThis.exports === 'undefined') {
-        try {
-          globalThis.exports = moduleObj.exports;
-        } catch (e) {
-          globalThis.exports = {};
+        
+        // Define exports - in CommonJS, exports is a reference to module.exports
+        if (typeof exports === 'undefined') {
+          try {
+            window.exports = moduleObj.exports;
+          } catch (e) {}
+          try {
+            if (typeof globalThis !== 'undefined') {
+              globalThis.exports = moduleObj.exports;
+            }
+          } catch (e) {}
+          try {
+            if (typeof global !== 'undefined') {
+              global.exports = moduleObj.exports;
+            }
+          } catch (e) {}
         }
-      }
-      
-      // Define require polyfill for CommonJS compatibility (needed by relayer-sdk)
-      // Create a base class that can be extended (for stream modules and any Node.js modules)
-      function BaseNodeModule() {}
-      BaseNodeModule.prototype = {};
-      
-      // Make it look like a proper class that can be extended
-      Object.setPrototypeOf(BaseNodeModule, Function.prototype);
-      
-      // Create a universal require function that always returns a valid constructor
-      function createRequirePolyfill() {
-        return function(id) {
-          // Normalize the module ID (remove .js extension, handle relative paths)
-          var normalizedId = String(id || '').replace(/\.js$/, '');
+        
+        // Define require polyfill - Create a proper base class that can be extended
+        function BaseNodeModule() {
+          // Make it a valid constructor
+        }
+        BaseNodeModule.prototype = Object.create(Object.prototype);
+        BaseNodeModule.prototype.constructor = BaseNodeModule;
+        
+        // Ensure it's a proper Function that can be extended
+        if (!(BaseNodeModule instanceof Function)) {
+          Object.setPrototypeOf(BaseNodeModule, Function.prototype);
+        }
+        
+        // Create require function with cache support
+        function createRequirePolyfill() {
+          var cache = {};
+          var requireFn = function(id) {
+            // Normalize the module ID
+            var normalizedId = String(id || '').replace(/\.js$/, '');
+            var isStreamModule = normalizedId.includes('stream') || 
+                                 normalizedId.includes('_stream') || 
+                                 normalizedId.includes('/streams/') ||
+                                 normalizedId === 'stream';
+            
+            if (isStreamModule) {
+              console.warn('require() called for stream module:', id, '- Using BaseNodeModule constructor');
+            } else {
+              console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
+            }
+            
+            // Always return the same constructor instance
+            // Use cache to ensure consistency
+            if (!cache[id]) {
+              cache[id] = BaseNodeModule;
+            }
+            return cache[id];
+          };
           
-          // Check if this looks like a stream-related module
-          var isStreamModule = normalizedId.includes('stream') || 
-                               normalizedId.includes('_stream') || 
-                               normalizedId.includes('/streams/') ||
-                               normalizedId === 'stream';
+          // Add cache property
+          requireFn.cache = cache;
+          requireFn.resolve = function(id) { return id; };
           
-          // For all modules, return a constructor that can be extended
-          if (isStreamModule) {
-            console.warn('require() called for stream module:', id, '- Using BaseNodeModule constructor');
-          } else {
-            console.warn('require() called for:', id, '- Using BaseNodeModule constructor as fallback');
-          }
-          
-          // Always return the constructor - never undefined or null
-          return BaseNodeModule;
-        };
-      }
-      
-      // Set up require on window and globalThis
-      if (typeof require === 'undefined') {
-        window.require = createRequirePolyfill();
-        // Also set up require.cache for compatibility
-        window.require.cache = {};
-      }
-      if (typeof globalThis !== 'undefined' && typeof globalThis.require === 'undefined') {
-        globalThis.require = createRequirePolyfill();
-        globalThis.require.cache = {};
-      }
+          return requireFn;
+        }
+        
+        // Set up require on all possible global objects
+        var requireFn = createRequirePolyfill();
+        
+        if (typeof require === 'undefined') {
+          try {
+            window.require = requireFn;
+          } catch (e) {}
+          try {
+            if (typeof globalThis !== 'undefined') {
+              globalThis.require = requireFn;
+            }
+          } catch (e) {}
+          try {
+            if (typeof global !== 'undefined') {
+              global.require = requireFn;
+            }
+          } catch (e) {}
+          // Also set it on this context
+          try {
+            this.require = requireFn;
+          } catch (e) {}
+        }
+      })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
