@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ethers, Eip1193Provider } from 'ethers';
+import { ethers, type Eip1193Provider } from 'ethers';
 import { createInstance } from '@zama-fhe/relayer-sdk/web';
 
 // Type declarations for WASM modules
@@ -105,10 +105,10 @@ const getWalletProvider = (timeout = 3000, interval = 200): Promise<Eip1193Provi
 
 // Main App Component
 function App() {
-  // Restore view state from localStorage, default to 'intro' if not found
-  // Use try-catch to handle cases where localStorage might not be available
+  // Restore view state from localStorage, default to 'home' if not found
   const [view, setView] = useState<'home' | 'main'>(() => {
     const savedView = localStorage.getItem('verisafe-view');
+    // Ensure that we only restore 'home' or 'main'
     return (savedView === 'main') ? 'main' : 'home';
   });
   
@@ -840,7 +840,7 @@ function App() {
   };
 
   // Intro page
-  if (view === 'intro') {
+  if (view === 'home') {
   return (
       <div className="container">
         <h1>VeriSafe</h1>
@@ -903,7 +903,7 @@ function App() {
     setLoading(false);
     setError(null);
     setCopySuccess(null);
-    setView('intro');
+    setView('home');
     // Note: We don't reset userDisconnected here, so if user disconnected,
     // it stays disconnected until they manually click "Connect Wallet"
   };
