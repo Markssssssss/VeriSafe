@@ -1,3 +1,6 @@
+import { Buffer } from 'buffer';
+window.Buffer = Buffer;
+
 // Polyfill for CommonJS globals (module, exports, require) if not defined (for relayer-sdk compatibility)
 // Note: This is a backup - the main polyfill is in index.html
 if (typeof module === 'undefined') {
