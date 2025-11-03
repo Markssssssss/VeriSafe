@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ethers } from 'ethers';
+import { ethers, Eip1193Provider } from 'ethers';
 import { createInstance } from '@zama-fhe/relayer-sdk/web';
 
 // Type declarations for WASM modules
@@ -83,19 +83,19 @@ const SEPOLIA_CHAIN_ID = 11155111;
  * This is necessary to handle race conditions where the wallet extension injects the provider after the app has already loaded.
  * @param {number} timeout - The maximum time to wait for the provider in milliseconds.
  * @param {number} interval - The interval between checks in milliseconds.
- * @returns {Promise<any>} A promise that resolves with the provider object or rejects if not found.
+ * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
  */
-const getWalletProvider = (timeout = 2000, interval = 200) => {
+const getWalletProvider = (timeout = 3000, interval = 200): Promise<Eip1193Provider> => {
   return new Promise((resolve, reject) => {
     let elapsed = 0;
     const check = () => {
       if (window.ethereum) {
-        resolve(window.ethereum);
+        resolve(window.ethereum as Eip1193Provider);
       } else if (elapsed < timeout) {
         elapsed += interval;
         setTimeout(check, interval);
       } else {
-        reject(new Error("Wallet provider not found. Please install a wallet extension."));
+        reject(new Error("Wallet provider not found. Please install a compatible wallet extension."));
       }
     };
     check();
@@ -107,16 +107,9 @@ const getWalletProvider = (timeout = 2000, interval = 200) => {
 function App() {
   // Restore view state from localStorage, default to 'intro' if not found
   // Use try-catch to handle cases where localStorage might not be available
-  const [view, setView] = useState<'intro' | 'main'>(() => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const savedView = localStorage.getItem('verisafe-view');
-        return (savedView === 'main' || savedView === 'intro') ? savedView : 'intro';
-      }
-    } catch (e) {
-      console.warn('localStorage not available:', e);
-    }
-    return 'intro';
+  const [view, setView] = useState<'home' | 'main'>(() => {
+    const savedView = localStorage.getItem('verisafe-view');
+    return (savedView === 'main') ? 'main' : 'home';
   });
   
   const [account, setAccount] = useState<string | null>(null);
@@ -255,7 +248,7 @@ function App() {
             // Only update if account changed
             if (currentAccount !== account) {
               if (!providerRef.current) {
-                providerRef.current = new ethers.BrowserProvider(window.ethereum);
+                providerRef.current = new ethers.BrowserProvider(provider);
               }
               if (providerRef.current) {
                 signerRef.current = await providerRef.current.getSigner();
@@ -331,12 +324,48 @@ function App() {
 
   const connectWallet = async () => {
     try {
+      // Robustly get the provider
       const provider = await getWalletProvider();
       
-      // Request account access
+      // Request account access first
       await provider.request({ method: 'eth_requestAccounts' });
       
-      providerRef.current = new ethers.BrowserProvider(provider);
+      // Create new provider instance
+      const browserProvider = new ethers.BrowserProvider(provider);
+      providerRef.current = browserProvider;
+
+      // Check if the current network is Sepolia
+      const network = await browserProvider.getNetwork();
+      if (Number(network.chainId) !== SEPOLIA_CHAIN_ID) {
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
+          });
+          // After switching, the provider needs to be re-initialized to get the new network context
+          providerRef.current = new ethers.BrowserProvider(provider);
+        } catch (switchError: any) {
+          // Handle case where Sepolia is not added to the wallet
+          if (switchError.code === 4902) {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
+                chainName: 'Sepolia',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://sepolia.infura.io/v3/'],
+                blockExplorerUrls: ['https://sepolia.etherscan.io']
+              }],
+            });
+            // Re-initialize provider after adding the network
+            providerRef.current = new ethers.BrowserProvider(provider);
+          } else {
+            throw switchError; // Re-throw other errors
+          }
+        }
+      }
+
+      if (!providerRef.current) throw new Error("Wallet provider became null after network switch.");
       
       signerRef.current = await providerRef.current.getSigner();
       const userAddress = await signerRef.current.getAddress();
