@@ -1,6 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { ethers } from 'ethers';
-import { initSDK, createInstance, SepoliaConfig } from '@zama-fhe/relayer-sdk/web';
+import { createInstance } from '@zama-fhe/relayer-sdk/web';
+
+// Type declarations for WASM modules
+declare global {
+  interface Window {
+    TFHE?: {
+      default: () => Promise<void>;
+      [key: string]: any;
+    };
+    TKMS?: {
+      default: () => Promise<void>;
+      [key: string]: any;
+    };
+  }
+}
+
+// Complete SepoliaConfig with all required fields (not using SDK's incomplete config)
+const FULL_SEPOLIA_CONFIG = {
+  aclContractAddress: '0x687820221192C5B662b25367F70076A37bc79b6c',
+  kmsContractAddress: '0x1364cBBf2cDF5032C47d8226a6f6FBD2AFCDacAC',
+  inputVerifierContractAddress: '0xbc91f3daD1A5F19F8390c400196e58073B6a0BC4',
+  verifyingContractAddressDecryption: '0xb6E160B1ff80D67Bfe90A85eE06Ce0A2613607D1',
+  verifyingContractAddressInputVerification: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
+  chainId: 11155111,
+  gatewayChainId: 55815,
+  network: 'https://eth-sepolia.public.blastapi.io',
+  relayerUrl: 'https://relayer.testnet.zama.cloud',
+};
 import './App.css';
 
 // Sepolia testnet contract address
@@ -83,6 +110,7 @@ function App() {
   const providerRef = useRef<ethers.BrowserProvider | null>(null);
   const signerRef = useRef<ethers.JsonRpcSigner | null>(null);
   const fhevmInstanceRef = useRef<any>(null); // FHEVM instance
+  const initializingRef = useRef<boolean>(false); // Prevent concurrent initialization
 
   // Listen for wallet account and network changes
   useEffect(() => {
@@ -215,6 +243,49 @@ function App() {
               if (providerRef.current) {
                 signerRef.current = await providerRef.current.getSigner();
                 setAccount(currentAccount);
+                
+                // Initialize FHEVM if not already initialized
+                if (!fhevmInstanceRef.current && !initializingRef.current) {
+                  try {
+                    console.log("Auto-initializing FHEVM after page reload...");
+                    initializingRef.current = true;
+                    
+                    // Manually initialize WASM modules (initSDK equivalent)
+                    console.log("Auto-init: Manually initializing WASM modules...");
+                    if (window.TFHE && window.TKMS) {
+                      try {
+                        await window.TFHE.default();
+                        await window.TKMS.default();
+                        console.log("Auto-init: WASM modules initialized");
+                      } catch (wasmError: any) {
+                        console.error("Auto-init: WASM initialization failed:", wasmError);
+                      }
+                    }
+                    
+                    console.log("Auto-init: FULL_SEPOLIA_CONFIG =", JSON.stringify(FULL_SEPOLIA_CONFIG, null, 2));
+                    console.log("Auto-init: relayerUrl =", FULL_SEPOLIA_CONFIG.relayerUrl);
+                    
+                    fhevmInstanceRef.current = await Promise.race([
+                      createInstance(FULL_SEPOLIA_CONFIG),
+                      new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout")), 30000))
+                    ]);
+                    
+                    if (fhevmInstanceRef.current) {
+                      console.log("FHEVM auto-initialization successful!");
+                    }
+                  } catch (fhevmError: any) {
+                    console.error("FHEVM auto-initialization failed:", fhevmError);
+                    console.error("Error cause:", fhevmError.cause);
+                    console.error("Error stack:", fhevmError.stack);
+                    if (fhevmError.cause) {
+                      console.error("Cause message:", fhevmError.cause.message);
+                      console.error("Cause stack:", fhevmError.cause.stack);
+                    }
+                    // Don't block wallet reconnection, just log the error
+                  } finally {
+                    initializingRef.current = false;
+                  }
+                }
               }
             }
           }
@@ -329,17 +400,28 @@ function App() {
         console.log("Provider:", providerRef.current);
         console.log("Signer:", signerRef.current);
         
-        // Initialize the SDK first
-        await initSDK();
-        console.log("FHEVM SDK initialized");
+        // Manually initialize WASM modules (initSDK equivalent)
+        console.log("Manually initializing WASM modules...");
+        if (window.TFHE && window.TKMS) {
+          try {
+            await window.TFHE.default();
+            await window.TKMS.default();
+            console.log("WASM modules initialized successfully");
+          } catch (wasmError: any) {
+            console.error("WASM initialization failed:", wasmError);
+          }
+        }
         
         // Create FHEVM instance for Sepolia
-        // SepoliaConfig should be a configuration object for Sepolia network
-        console.log("Creating FHEVM instance with SepoliaConfig...");
-        console.log("SepoliaConfig:", SepoliaConfig);
+        console.log("Creating FHEVM instance with FULL_SEPOLIA_CONFIG...");
+        console.log("FULL_SEPOLIA_CONFIG:", FULL_SEPOLIA_CONFIG);
         
         // createInstance is async, so we need to await it
-        fhevmInstanceRef.current = await createInstance(SepoliaConfig);
+        fhevmInstanceRef.current = await Promise.race([
+          createInstance(FULL_SEPOLIA_CONFIG),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout after 30s")), 30000))
+        ]);
+        
         console.log("FHEVM instance created:", fhevmInstanceRef.current);
         console.log("FHEVM instance type:", typeof fhevmInstanceRef.current);
         console.log("FHEVM instance keys:", fhevmInstanceRef.current ? Object.keys(fhevmInstanceRef.current) : "null");
@@ -426,6 +508,11 @@ function App() {
   const ageInputRef = useRef<HTMLInputElement>(null);
 
   const verifyAge = async () => {
+    console.log("=== verifyAge() called ===");
+    console.log("account:", account);
+    console.log("signerRef.current:", signerRef.current);
+    console.log("fhevmInstanceRef.current:", fhevmInstanceRef.current);
+    
     if (!account || !signerRef.current) {
       alert("Please connect your wallet first.");
       return;
@@ -434,19 +521,54 @@ function App() {
     // Check and reinitialize FHEVM if needed
     if (!fhevmInstanceRef.current) {
       console.log("FHEVM instance lost, reinitializing...");
+      
+      // Prevent concurrent initialization
+      if (initializingRef.current) {
+        console.log("Already initializing, waiting...");
+        setError("FHEVM is currently initializing, please wait...");
+        setLoading(false);
+        return;
+      }
+      
+      initializingRef.current = true;
+      
       try {
-        await initSDK();
-        fhevmInstanceRef.current = await createInstance(SepoliaConfig);
+        // Manually initialize WASM modules
+        console.log("Step 1: Manually initializing WASM modules...");
+        if (window.TFHE && window.TKMS) {
+          try {
+            await window.TFHE.default();
+            await window.TKMS.default();
+            console.log("Step 1.5: WASM modules initialized");
+          } catch (wasmError: any) {
+            console.error("Step 1.5: WASM initialization failed:", wasmError);
+          }
+        }
+        
+        console.log("Step 2: Calling createInstance(FULL_SEPOLIA_CONFIG)...");
+        console.log("FULL_SEPOLIA_CONFIG:", FULL_SEPOLIA_CONFIG);
+        
+        fhevmInstanceRef.current = await Promise.race([
+          createInstance(FULL_SEPOLIA_CONFIG),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout after 30s")), 30000))
+        ]);
+        
+        console.log("Step 3: createInstance() completed");
+        
         if (!fhevmInstanceRef.current) {
           throw new Error("createInstance returned null or undefined");
         }
         console.log("FHEVM instance reinitialized successfully");
+        console.log("Reinitialized FHEVM keys:", Object.keys(fhevmInstanceRef.current));
       } catch (reinitError: any) {
         console.error("Failed to reinitialize FHEVM:", reinitError);
-        setError("FHEVM initialization failed. Please refresh the page and reconnect your wallet.");
+        console.error("Error details:", reinitError.message, reinitError.stack);
+        setError("FHEVM initialization failed: " + reinitError.message);
         setLoading(false);
-        alert("FHEVM initialization failed. Please refresh the page and reconnect your wallet.");
+        alert("FHEVM initialization failed: " + reinitError.message + "\n\nPlease refresh the page.");
         return;
+      } finally {
+        initializingRef.current = false;
       }
     }
 
