@@ -22,6 +22,8 @@ export default defineConfig({
         global: true,
         process: true
       },
+      // Explicitly include 'buffer' to ensure it's available in production builds
+      protocolImports: true,
       // Explicitly enable stream polyfills for relayer-sdk
       include: [
         'stream',
@@ -181,9 +183,10 @@ export default defineConfig({
     copyPublicDir: true,
     commonjsOptions: {
       transformMixedEsModules: true,
-      include: [/fetch-retry/, /react/, /react-dom/, /keccak/, /@zama-fhe\/relayer-sdk/],
+      include: [/node_modules/],
       // Enable default interop for CommonJS modules
-      defaultIsModuleExports: true
+      defaultIsModuleExports: true,
+      requireReturnsDefault: 'auto'
     },
     rollupOptions: {
       output: {
