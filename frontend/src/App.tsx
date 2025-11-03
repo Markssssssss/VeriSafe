@@ -78,6 +78,32 @@ const CONTRACT_ABI = [
 // Sepolia testnet Chain ID
 const SEPOLIA_CHAIN_ID = 11155111;
 
+/**
+ * Robustly polls for the window.ethereum provider object.
+ * This is necessary to handle race conditions where the wallet extension injects the provider after the app has already loaded.
+ * @param {number} timeout - The maximum time to wait for the provider in milliseconds.
+ * @param {number} interval - The interval between checks in milliseconds.
+ * @returns {Promise<any>} A promise that resolves with the provider object or rejects if not found.
+ */
+const getWalletProvider = (timeout = 2000, interval = 200) => {
+  return new Promise((resolve, reject) => {
+    let elapsed = 0;
+    const check = () => {
+      if (window.ethereum) {
+        resolve(window.ethereum);
+      } else if (elapsed < timeout) {
+        elapsed += interval;
+        setTimeout(check, interval);
+      } else {
+        reject(new Error("Wallet provider not found. Please install a wallet extension."));
+      }
+    };
+    check();
+  });
+};
+
+
+// Main App Component
 function App() {
   // Restore view state from localStorage, default to 'intro' if not found
   // Use try-catch to handle cases where localStorage might not be available
@@ -219,65 +245,62 @@ function App() {
     if (view === 'main' && !userDisconnected) {
       const checkWalletConnection = async () => {
         try {
-          // Add a delay to allow wallet extensions to inject the provider
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // Robustly wait for the provider to be injected
+          const provider = await getWalletProvider();
 
-          // Use a more generic check for any EIP-1193 provider
-          if (window.ethereum) {
-            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-            if (accounts.length > 0) {
-              const currentAccount = accounts[0];
-              console.log("Wallet already connected:", currentAccount);
-              // Only update if account changed
-              if (currentAccount !== account) {
-                if (!providerRef.current) {
-                  providerRef.current = new ethers.BrowserProvider(window.ethereum);
-                }
-                if (providerRef.current) {
-                  signerRef.current = await providerRef.current.getSigner();
-                  setAccount(currentAccount);
-                  
-                  // Initialize FHEVM if not already initialized
-                  if (!fhevmInstanceRef.current && !initializingRef.current) {
-                    try {
-                      console.log("Auto-initializing FHEVM after page reload...");
-                      initializingRef.current = true;
-                      
-                      // Manually initialize WASM modules (initSDK equivalent)
-                      console.log("Auto-init: Manually initializing WASM modules...");
-                      if (window.TFHE && window.TKMS) {
-                        try {
-                          await window.TFHE.default();
-                          await window.TKMS.default();
-                          console.log("Auto-init: WASM modules initialized");
-                        } catch (wasmError: any) {
-                          console.error("Auto-init: WASM initialization failed:", wasmError);
-                        }
+          const accounts = await provider.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            const currentAccount = accounts[0];
+            console.log("Wallet already connected:", currentAccount);
+            // Only update if account changed
+            if (currentAccount !== account) {
+              if (!providerRef.current) {
+                providerRef.current = new ethers.BrowserProvider(window.ethereum);
+              }
+              if (providerRef.current) {
+                signerRef.current = await providerRef.current.getSigner();
+                setAccount(currentAccount);
+                
+                // Initialize FHEVM if not already initialized
+                if (!fhevmInstanceRef.current && !initializingRef.current) {
+                  try {
+                    console.log("Auto-initializing FHEVM after page reload...");
+                    initializingRef.current = true;
+                    
+                    // Manually initialize WASM modules (initSDK equivalent)
+                    console.log("Auto-init: Manually initializing WASM modules...");
+                    if (window.TFHE && window.TKMS) {
+                      try {
+                        await window.TFHE.default();
+                        await window.TKMS.default();
+                        console.log("Auto-init: WASM modules initialized");
+                      } catch (wasmError: any) {
+                        console.error("Auto-init: WASM initialization failed:", wasmError);
                       }
-                      
-                      console.log("Auto-init: FULL_SEPOLIA_CONFIG =", JSON.stringify(FULL_SEPOLIA_CONFIG, null, 2));
-                      console.log("Auto-init: relayerUrl =", FULL_SEPOLIA_CONFIG.relayerUrl);
-                      
-                      fhevmInstanceRef.current = await Promise.race([
-                        createInstance(FULL_SEPOLIA_CONFIG),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout")), 30000))
-                      ]);
-                      
-                      if (fhevmInstanceRef.current) {
-                        console.log("FHEVM auto-initialization successful!");
-                      }
-                    } catch (fhevmError: any) {
-                      console.error("FHEVM auto-initialization failed:", fhevmError);
-                      console.error("Error cause:", fhevmError.cause);
-                      console.error("Error stack:", fhevmError.stack);
-                      if (fhevmError.cause) {
-                        console.error("Cause message:", fhevmError.cause.message);
-                        console.error("Cause stack:", fhevmError.cause.stack);
-                      }
-                      // Don't block wallet reconnection, just log the error
-                    } finally {
-                      initializingRef.current = false;
                     }
+                    
+                    console.log("Auto-init: FULL_SEPOLIA_CONFIG =", JSON.stringify(FULL_SEPOLIA_CONFIG, null, 2));
+                    console.log("Auto-init: relayerUrl =", FULL_SEPOLIA_CONFIG.relayerUrl);
+                    
+                    fhevmInstanceRef.current = await Promise.race([
+                      createInstance(FULL_SEPOLIA_CONFIG),
+                      new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout")), 30000))
+                    ]);
+                    
+                    if (fhevmInstanceRef.current) {
+                      console.log("FHEVM auto-initialization successful!");
+                    }
+                  } catch (fhevmError: any) {
+                    console.error("FHEVM auto-initialization failed:", fhevmError);
+                    console.error("Error cause:", fhevmError.cause);
+                    console.error("Error stack:", fhevmError.stack);
+                    if (fhevmError.cause) {
+                      console.error("Cause message:", fhevmError.cause.message);
+                      console.error("Cause stack:", fhevmError.cause.stack);
+                    }
+                    // Don't block wallet reconnection, just log the error
+                  } finally {
+                    initializingRef.current = false;
                   }
                 }
               }
@@ -307,87 +330,14 @@ function App() {
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
 
   const connectWallet = async () => {
-    // Check if a wallet extension is installed
-    if (typeof window.ethereum === 'undefined') {
-      alert("Please install a wallet (e.g., MetaMask or OKX Wallet)!");
-      return;
-    }
-
     try {
-      // Reset disconnect flag when user clicks connect
-      setUserDisconnected(false);
+      const provider = await getWalletProvider();
       
-      // Create new provider instance
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      providerRef.current = provider;
+      // Request account access
+      await provider.request({ method: 'eth_requestAccounts' });
       
-      // Request wallet connection
-      try {
-        await provider.send("eth_requestAccounts", []);
-      } catch (connectionError: any) {
-        // User rejected the connection request (code 4001)
-        if (connectionError.code === 4001 || connectionError.action === 'requestAccess') {
-          // User cancelled, don't show error - just return silently
-          setLoading(false);
-          return;
-        }
-        // Other errors, re-throw to be handled below
-        throw connectionError;
-      }
+      providerRef.current = new ethers.BrowserProvider(provider);
       
-      // Ensure provider is still valid before proceeding
-      if (!providerRef.current) {
-        throw new Error("Provider was cleared. Please try again.");
-      }
-      
-      // Check if current network is Sepolia
-      const network = await providerRef.current.getNetwork();
-      const currentChainId = Number(network.chainId);
-      
-      if (currentChainId !== SEPOLIA_CHAIN_ID) {
-        // Try to switch to Sepolia network
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}` }],
-          });
-        } catch (switchError: any) {
-          // If Sepolia network doesn't exist, add it
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: `0x${SEPOLIA_CHAIN_ID.toString(16)}`,
-                chainName: 'Sepolia',
-                nativeCurrency: {
-                  name: 'ETH',
-                  symbol: 'ETH',
-                  decimals: 18
-                },
-                rpcUrls: ['https://sepolia.infura.io/v3/'],
-                blockExplorerUrls: ['https://sepolia.etherscan.io']
-              }],
-            });
-          } else {
-            throw switchError;
-          }
-        }
-        
-        // Re-fetch network info after switching
-        // Re-create provider after network switch to ensure it's fresh
-        providerRef.current = new ethers.BrowserProvider(window.ethereum);
-        const newNetwork = await providerRef.current.getNetwork();
-        const newChainId = Number(newNetwork.chainId);
-        if (newChainId !== SEPOLIA_CHAIN_ID) {
-          throw new Error(`Please switch to Sepolia Testnet (Chain ID: ${SEPOLIA_CHAIN_ID})`);
-        }
-      }
-
-      // Ensure provider is still valid before getting signer
-      if (!providerRef.current) {
-        throw new Error("Provider was cleared. Please try again.");
-      }
-
       signerRef.current = await providerRef.current.getSigner();
       const userAddress = await signerRef.current.getAddress();
       setAccount(userAddress);
@@ -443,23 +393,9 @@ function App() {
         // Don't block wallet connection, but set error for user to see
       }
       
-    } catch (e: any) {
-      console.error(e);
-      
-      // Check if user rejected the action
-      if (e.code === 4001 || e.action === 'requestAccess' || e.reason === 'rejected') {
-        // User cancelled the connection, don't show error
-        setError(null);
-        setLoading(false);
-        return;
-      }
-      
-      // For other errors, show error message
-      const errorMessage = e.message || 'Unknown error occurred';
-      setError(`Wallet connection failed: ${errorMessage}`);
-      alert(`Wallet connection failed: ${errorMessage}\n\nPlease ensure:\n1. MetaMask is installed\n2. Switch to Sepolia Testnet\n3. Wallet is unlocked`);
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.error("Failed to connect wallet:", error);
+      alert(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
     }
   };
 
