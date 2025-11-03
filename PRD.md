@@ -9,11 +9,15 @@
 
 ## 1. Introduction & Vision
 
-**VeriSafe** is a decentralized privacy-preserving verification tool built on the **Zama FHEVM** protocol. Our vision is to establish a new standard for qualification verification in the digital world, enabling users to securely and instantly prove they meet specific requirements **without exposing any sensitive personal data**.
+### 1.1. Overview
 
-**VeriSafe** was inspired by the privacy risks faced during rental and property purchase processes. When applying for rentals or loans, users are often required to submit sensitive personal information—such as exact age, annual income, and credit scores—to intermediaries, platforms, or agencies. This information is frequently over-collected (when only a simple yes/no eligibility check is needed) and poses significant privacy and security risks due to opaque storage and usage practices.
+VeriSafe is a decentralized application (dApp) that provides privacy-preserving age verification, built on the Zama FHEVM protocol. It allows users to prove they meet a specific age requirement (e.g., 18+) without revealing their actual age. The entire process leverages Fully Homomorphic Encryption (FHE) to ensure that sensitive user data remains encrypted from client-side submission to on-chain computation and result decryption. As a foundational blueprint, it also demonstrates how FHE can extend to broader verifiable KYC (Know Your Customer) processes.
 
-For this MVP, **VeriSafe** focuses on verifying whether users meet the **legal age requirement** (18+ years) for signing rental contracts. Our core philosophy: **"Verify Safely, Remain Private"**—allowing eligibility verification without exposing actual personal data values.
+### 1.2. Vision
+
+The vision for VeriSafe is to establish a new paradigm for digital identity where privacy and verifiability are not mutually exclusive. Current identity systems often force users to overshare sensitive data with centralized entities, creating security risks and data silos. VeriSafe aims to solve this by empowering users to retain full control over their personal information while still being able to interact with services that have compliance requirements.
+
+To expand upon this vision, VeriSafe aims to evolve into a comprehensive suite for verifiable credentials. Future iterations will integrate broader KYC functionalities, allowing users to privately verify critical attributes like residency or accreditation status. By applying the same FHE (Fully Homomorphic Encryption) technology at its core, VeriSafe will empower users to generate and present cryptographic proofs to services without ever revealing the underlying personal information. This approach paves the way for a new generation of decentralized, privacy-preserving identity and compliance tools, all powered by on-chain computation over encrypted data.
 
 ---
 

@@ -1,12 +1,10 @@
-# VeriSafe - Privacy-Preserving Age Verification
+# VeriSafe - A Privacy-Preserving KYC Tool Powered by FHE
 
-A decentralized dApp built on **Zama FHEVM** protocol that enables users to verify age requirements without revealing their exact age. Powered by Fully Homomorphic Encryption (FHE), VeriSafe provides end-to-end privacy protection while maintaining on-chain verifiability.
+VeriSafe is a decentralized Know Your Customer (KYC) tool built on the **Zama FHEVM** protocol. It redefines digital identity verification by allowing users to prove they meet specific requirements without revealing sensitive personal data. Powered by Fully Homemorphic Encryption (FHE), VeriSafe provides end-to-end privacy with on-chain verifiability. This initial version focuses on **age verification**, demonstrating the core technology.
 
 ## 🌟 Overview
 
-**VeriSafe** is a privacy-first age verification system deployed on Sepolia Testnet. Inspired by the privacy risks faced during rental and property purchase processes, where sensitive personal information such as age, income, and credit scores are often unnecessarily exposed to intermediaries and agencies, VeriSafe addresses this fundamental privacy concern.
-
-The project was conceived to protect users' personal data while still allowing verification of eligibility thresholds. It allows users to prove they meet age requirements (18+ years) without exposing their actual age value. The entire verification process uses FHE technology, ensuring that sensitive personal data remains encrypted throughout the computation.
+Inspired by the privacy risks in processes like property rentals—where sensitive data such as age, income, and credit scores are often overexposed—VeriSafe offers a solution. The project was conceived to protect user data while still enabling eligibility checks. As its first use case, VeriSafe allows users to prove they meet an age threshold (e.g., 18+) without disclosing their actual age, with the entire process secured by FHE.
 
 ### Core Value Proposition
 
