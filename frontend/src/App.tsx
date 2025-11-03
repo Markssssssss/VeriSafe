@@ -219,71 +219,65 @@ function App() {
     if (view === 'main' && !userDisconnected) {
       const checkWalletConnection = async () => {
         try {
-          if (!window.ethereum) {
-            // No MetaMask, clear wallet state
-            providerRef.current = null;
-            signerRef.current = null;
-            setAccount(null);
-            return;
-          }
+          // Add a delay to allow wallet extensions to inject the provider
+          await new Promise(resolve => setTimeout(resolve, 500));
 
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length === 0) {
-            // No connected accounts, clear wallet state
-            providerRef.current = null;
-            signerRef.current = null;
-            setAccount(null);
-          } else {
-            const currentAccount = accounts[0];
-            // Only update if account changed
-            if (currentAccount !== account) {
-              if (!providerRef.current) {
-                providerRef.current = new ethers.BrowserProvider(window.ethereum);
-              }
-              if (providerRef.current) {
-                signerRef.current = await providerRef.current.getSigner();
-                setAccount(currentAccount);
-                
-                // Initialize FHEVM if not already initialized
-                if (!fhevmInstanceRef.current && !initializingRef.current) {
-                  try {
-                    console.log("Auto-initializing FHEVM after page reload...");
-                    initializingRef.current = true;
-                    
-                    // Manually initialize WASM modules (initSDK equivalent)
-                    console.log("Auto-init: Manually initializing WASM modules...");
-                    if (window.TFHE && window.TKMS) {
-                      try {
-                        await window.TFHE.default();
-                        await window.TKMS.default();
-                        console.log("Auto-init: WASM modules initialized");
-                      } catch (wasmError: any) {
-                        console.error("Auto-init: WASM initialization failed:", wasmError);
+          // Use a more generic check for any EIP-1193 provider
+          if (window.ethereum) {
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (accounts.length > 0) {
+              const currentAccount = accounts[0];
+              console.log("Wallet already connected:", currentAccount);
+              // Only update if account changed
+              if (currentAccount !== account) {
+                if (!providerRef.current) {
+                  providerRef.current = new ethers.BrowserProvider(window.ethereum);
+                }
+                if (providerRef.current) {
+                  signerRef.current = await providerRef.current.getSigner();
+                  setAccount(currentAccount);
+                  
+                  // Initialize FHEVM if not already initialized
+                  if (!fhevmInstanceRef.current && !initializingRef.current) {
+                    try {
+                      console.log("Auto-initializing FHEVM after page reload...");
+                      initializingRef.current = true;
+                      
+                      // Manually initialize WASM modules (initSDK equivalent)
+                      console.log("Auto-init: Manually initializing WASM modules...");
+                      if (window.TFHE && window.TKMS) {
+                        try {
+                          await window.TFHE.default();
+                          await window.TKMS.default();
+                          console.log("Auto-init: WASM modules initialized");
+                        } catch (wasmError: any) {
+                          console.error("Auto-init: WASM initialization failed:", wasmError);
+                        }
                       }
+                      
+                      console.log("Auto-init: FULL_SEPOLIA_CONFIG =", JSON.stringify(FULL_SEPOLIA_CONFIG, null, 2));
+                      console.log("Auto-init: relayerUrl =", FULL_SEPOLIA_CONFIG.relayerUrl);
+                      
+                      fhevmInstanceRef.current = await Promise.race([
+                        createInstance(FULL_SEPOLIA_CONFIG),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout")), 30000))
+                      ]);
+                      
+                      if (fhevmInstanceRef.current) {
+                        console.log("FHEVM auto-initialization successful!");
+                      }
+                    } catch (fhevmError: any) {
+                      console.error("FHEVM auto-initialization failed:", fhevmError);
+                      console.error("Error cause:", fhevmError.cause);
+                      console.error("Error stack:", fhevmError.stack);
+                      if (fhevmError.cause) {
+                        console.error("Cause message:", fhevmError.cause.message);
+                        console.error("Cause stack:", fhevmError.cause.stack);
+                      }
+                      // Don't block wallet reconnection, just log the error
+                    } finally {
+                      initializingRef.current = false;
                     }
-                    
-                    console.log("Auto-init: FULL_SEPOLIA_CONFIG =", JSON.stringify(FULL_SEPOLIA_CONFIG, null, 2));
-                    console.log("Auto-init: relayerUrl =", FULL_SEPOLIA_CONFIG.relayerUrl);
-                    
-                    fhevmInstanceRef.current = await Promise.race([
-                      createInstance(FULL_SEPOLIA_CONFIG),
-                      new Promise((_, reject) => setTimeout(() => reject(new Error("createInstance timeout")), 30000))
-                    ]);
-                    
-                    if (fhevmInstanceRef.current) {
-                      console.log("FHEVM auto-initialization successful!");
-                    }
-                  } catch (fhevmError: any) {
-                    console.error("FHEVM auto-initialization failed:", fhevmError);
-                    console.error("Error cause:", fhevmError.cause);
-                    console.error("Error stack:", fhevmError.stack);
-                    if (fhevmError.cause) {
-                      console.error("Cause message:", fhevmError.cause.message);
-                      console.error("Cause stack:", fhevmError.cause.stack);
-                    }
-                    // Don't block wallet reconnection, just log the error
-                  } finally {
-                    initializingRef.current = false;
                   }
                 }
               }
@@ -298,19 +292,24 @@ function App() {
         }
       };
       
-      // Small delay to ensure component is mounted
-      const timer = setTimeout(() => {
+      // Ensure the check runs after the window has fully loaded
+      if (document.readyState === 'complete') {
         checkWalletConnection();
-      }, 100);
+      } else {
+        window.addEventListener('load', checkWalletConnection, { once: true });
+      }
       
-      return () => clearTimeout(timer);
+      return () => {
+        window.removeEventListener('load', checkWalletConnection);
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
 
   const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert("Please install MetaMask!");
+    // Check if a wallet extension is installed
+    if (typeof window.ethereum === 'undefined') {
+      alert("Please install a wallet (e.g., MetaMask or OKX Wallet)!");
       return;
     }
 
