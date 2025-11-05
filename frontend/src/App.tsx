@@ -135,7 +135,6 @@ function App() {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null); // Copy success indicator
-  const [userDisconnected, setUserDisconnected] = useState<boolean>(false); // Track if user manually disconnected
   
   // Save view state to localStorage whenever it changes
   useEffect(() => {
@@ -162,7 +161,6 @@ function App() {
         setResult(null);
         setError(null);
         setAge('');
-        setUserDisconnected(true); // Also mark as disconnected when MetaMask disconnects
       } else if (accounts[0] !== account) {
         // User switched account or reconnected
         // Recreate provider if it doesn't exist
@@ -476,7 +474,6 @@ function App() {
       setResult(null);
       setError(null);
       setAge('');
-      setUserDisconnected(true); // Mark that user manually disconnected
       
       // Note: MetaMask's connection state is managed by MetaMask itself
       // Frontend cannot directly "disconnect" MetaMask's connection
