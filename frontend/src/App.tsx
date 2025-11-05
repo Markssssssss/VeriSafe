@@ -94,43 +94,27 @@ const getWalletProvider = (timeout = 7000): Promise<Eip1193Provider> => {
       return resolve(window.ethereum as Eip1193Provider);
     }
 
-    // Set a timeout to reject the promise if the event isn't fired
+    const onInitialize = () => {
+      // The event fired, so we can clear the timeout and resolve.
+      clearTimeout(timeoutId);
+      resolve(window.ethereum as Eip1193Provider);
+    };
+
+    // Listen for the modern wallet event.
+    window.addEventListener('ethereum#initialized', onInitialize, { once: true });
+
+    // Set a timeout as a fallback.
     const timeoutId = setTimeout(() => {
-      // Before rejecting, do one last check in case the event fired just before the timeout was set
+      // The timeout fired, so we should remove the event listener.
+      window.removeEventListener('ethereum#initialized', onInitialize);
+      
+      // Do one last check before rejecting.
       if (window.ethereum) {
         resolve(window.ethereum as Eip1193Provider);
       } else {
         reject(new Error("Wallet provider not found after " + timeout + "ms. The wallet extension may be disabled or slow to load."));
       }
     }, timeout);
-
-    // Modern wallets fire an 'ethereum#initialized' event once they're ready.
-    // This is more reliable than polling.
-    const onInitialize = () => {
-      clearTimeout(timeoutId); // Clear the timeout since we found the provider
-      resolve(window.ethereum as Eip1193Provider);
-    };
-    
-    window.addEventListener('ethereum#initialized', onInitialize, { once: true });
-
-    // Cleanup the event listener if the component unmounts or the promise is rejected
-    // This is good practice but may not be strictly necessary with { once: true }
-    const cleanup = () => {
-      window.removeEventListener('ethereum#initialized', onInitialize);
-      clearTimeout(timeoutId);
-    };
-
-    // This is a slightly more complex way to handle cleanup for a promise
-    // that might be garbage collected if the calling component unmounts.
-    // For our case, it's a reasonable safeguard.
-    const promise = new Promise<Eip1193Provider>((res, rej) => {
-        const originalResolve = resolve;
-        const originalReject = reject;
-        resolve = (value) => { cleanup(); originalResolve(value); };
-        reject = (reason) => { cleanup(); originalReject(reason); };
-    });
-    
-    return promise;
   });
 };
 
