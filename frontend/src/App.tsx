@@ -25,7 +25,8 @@ const FULL_SEPOLIA_CONFIG = {
   verifyingContractAddressInputVerification: '0x7048C39f048125eDa9d678AEbaDfB22F7900a29F',
   chainId: 11155111,
   gatewayChainId: 55815,
-  network: 'https://eth-sepolia.public.blastapi.io',
+  // Use a more reliable RPC endpoint like Alchemy's
+  network: 'https://eth-sepolia.g.alchemy.com/v2/demo',
   relayerUrl: 'https://relayer.testnet.zama.cloud',
 };
 import './App.css';
@@ -300,11 +301,12 @@ function App() {
             }
           }
         } catch (e) {
-          console.error('Error checking wallet connection:', e);
-          // If error, clear wallet state
+          console.warn('Wallet not found or not connected:', e);
+          // If error, clear wallet state but don't show error (just show info message)
           providerRef.current = null;
           signerRef.current = null;
           setAccount(null);
+          // Don't set error state - let user see the UI and connect wallet when ready
         }
       };
       
@@ -831,8 +833,16 @@ function App() {
       }
 
     } catch (e: any) {
-      console.error(e);
-      setError(`Verification failed: ${e.message}`);
+      // Handle potential errors, including user rejection
+      if (e.code === 'ACTION_REJECTED' || (e.info?.error?.code === 4001)) {
+        console.log('Transaction rejected by user.');
+        // Don't set an error message, just return to the initial state
+      } else {
+        // Handle other errors (e.g., network issues, contract errors)
+        const errorMessage = e.reason || e.message || 'An unknown error occurred.';
+        console.error('Full error object in verifyAge:', e);
+        setError(`Verification failed: ${errorMessage}`);
+      }
       // Don't set result on error
     } finally {
       setLoading(false);
