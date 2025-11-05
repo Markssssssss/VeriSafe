@@ -81,7 +81,8 @@ const SEPOLIA_CHAIN_ID = 11155111;
 
 /**
  * Robustly polls for the window.ethereum provider object.
- * This is necessary to handle race conditions where the wallet extension injects the provider after the app has already loaded.
+ * This is the standard (EIP-1193) interface injected by browser wallets like MetaMask, OKX Wallet, etc.
+ * This polling is necessary to handle race conditions where the app loads before the wallet extension is ready.
  * @param {number} timeout - The maximum time to wait for the provider in milliseconds.
  * @param {number} interval - The interval between checks in milliseconds.
  * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
@@ -426,7 +427,8 @@ function App() {
       
     } catch (error: any) {
       console.error("Failed to connect wallet:", error);
-      alert(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
+      // Replace the alert with a console.warn or a less intrusive UI notification
+      setError(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
     }
   };
 
