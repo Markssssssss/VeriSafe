@@ -90,6 +90,55 @@ const CONTRACT_ABI = [
 // Sepolia testnet Chain ID
 const SEPOLIA_CHAIN_ID = 11155111;
 
+// Wallet configuration
+interface WalletConfig {
+  id: string;
+  name: string;
+  iconUrl: string;
+  checkInstalled: () => boolean;
+  getProvider: () => any;
+  downloadUrl: string;
+}
+
+const SUPPORTED_WALLETS: WalletConfig[] = [
+  {
+    id: 'okx',
+    name: 'OKX Wallet',
+    // OKX logo from reliable CDN
+    iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/128/color/okb.png',
+    checkInstalled: () => typeof window.okxwallet !== 'undefined',
+    getProvider: () => window.okxwallet,
+    downloadUrl: 'https://www.okx.com/web3'
+  },
+  {
+    id: 'metamask',
+    name: 'MetaMask',
+    // MetaMask logo from reliable CDN
+    iconUrl: 'https://cdn.jsdelivr.net/gh/MetaMask/brand-resources@master/SVG/metamask-fox.svg',
+    checkInstalled: () => typeof window.ethereum !== 'undefined' && (window.ethereum as any)?.isMetaMask,
+    getProvider: () => window.ethereum,
+    downloadUrl: 'https://metamask.io/download/'
+  },
+  {
+    id: 'coinbase',
+    name: 'Coinbase Wallet',
+    // Coinbase Wallet logo from logo.dev
+    iconUrl: 'https://logo.dev/coinbase/icon?theme=dark&format=png&size=256',
+    checkInstalled: () => typeof window.coinbaseWalletExtension !== 'undefined' || (window.ethereum as any)?.isCoinbaseWallet,
+    getProvider: () => window.coinbaseWalletExtension || window.ethereum,
+    downloadUrl: 'https://www.coinbase.com/wallet/downloads'
+  },
+  {
+    id: 'trust',
+    name: 'Trust Wallet',
+    // Trust Wallet logo from cryptocurrency icons
+    iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/128/color/twt.png',
+    checkInstalled: () => typeof window.trustwallet !== 'undefined',
+    getProvider: () => window.trustwallet,
+    downloadUrl: 'https://trustwallet.com/download'
+  }
+];
+
 /**
  * Detects and returns available wallet providers.
  * Supports MetaMask, OKX Wallet, Coinbase Wallet, Trust Wallet, and other EIP-1193 compatible wallets.
@@ -132,53 +181,6 @@ const detectWalletProvider = (): Eip1193Provider | null => {
   return null;
 };
 
-/**
- * Robustly polls for wallet provider objects.
- * This is the standard (EIP-1193) interface injected by browser wallets like MetaMask, OKX Wallet, etc.
- * This polling is necessary to handle race conditions where the app loads before the wallet extension is ready.
- * @param {number} timeout - The maximum time to wait for the provider in milliseconds.
- * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
- */
-const getWalletProvider = (timeout = 7000): Promise<Eip1193Provider> => {
-  return new Promise((resolve, reject) => {
-    // Check if provider is already available
-    const provider = detectWalletProvider();
-    if (provider) {
-      return resolve(provider);
-    }
-
-    const checkProvider = () => {
-      const provider = detectWalletProvider();
-      if (provider) {
-        clearTimeout(timeoutId);
-        window.removeEventListener('ethereum#initialized', onInitialize);
-        resolve(provider);
-      }
-    };
-
-    const onInitialize = () => {
-      checkProvider();
-    };
-
-    // Listen for wallet initialization events
-    window.addEventListener('ethereum#initialized', onInitialize, { once: true });
-
-    // Set a timeout as a fallback.
-    const timeoutId = setTimeout(() => {
-      window.removeEventListener('ethereum#initialized', onInitialize);
-      
-      // Do one last check before rejecting.
-      const provider = detectWalletProvider();
-      if (provider) {
-        resolve(provider);
-      } else {
-        reject(new Error("No wallet provider found after " + timeout + "ms. Please install MetaMask, OKX Wallet, or another Web3 wallet."));
-      }
-    }, timeout);
-  });
-};
-
-
 // Main App Component
 function App() {
   // Restore view state from localStorage, default to 'home' if not found
@@ -195,6 +197,7 @@ function App() {
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null); // Copy success indicator
+  const [showWalletModal, setShowWalletModal] = useState<boolean>(false); // Wallet selection modal
   
   // Save view state to localStorage whenever it changes
   useEffect(() => {
@@ -412,22 +415,38 @@ function App() {
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
   */
 
-  const connectWallet = async () => {
-    console.log('🔵 [DEBUG] connectWallet called');
-    console.log('🔵 [DEBUG] Checking available wallets...');
-    console.log('🔵 [DEBUG] window.ethereum:', typeof window.ethereum !== 'undefined');
-    console.log('🔵 [DEBUG] window.okxwallet:', typeof window.okxwallet !== 'undefined');
-    console.log('🔵 [DEBUG] window.coinbaseWalletExtension:', typeof window.coinbaseWalletExtension !== 'undefined');
-    console.log('🔵 [DEBUG] window.trustwallet:', typeof window.trustwallet !== 'undefined');
-    console.log('🔵 [DEBUG] Current isConnecting:', isConnecting);
+  // Open wallet selection modal
+  const openWalletModal = () => {
+    setShowWalletModal(true);
+    setError(null);
+  };
+
+  // Connect to a specific wallet
+  const connectWallet = async (walletConfig: WalletConfig) => {
+    console.log('🔵 [DEBUG] connectWallet called for:', walletConfig.name);
     
+    setShowWalletModal(false); // Close modal
     setIsConnecting(true); // Set loading state immediately on click
     setError(null); // Clear previous errors
 
     try {
-      console.log('🔵 [DEBUG] Calling getWalletProvider...');
-      // Robustly get the provider
-      const provider = await getWalletProvider();
+      // Check if wallet is installed
+      if (!walletConfig.checkInstalled()) {
+        const shouldDownload = window.confirm(
+          `${walletConfig.name} is not installed.\n\nWould you like to download it now?`
+        );
+        if (shouldDownload) {
+          window.open(walletConfig.downloadUrl, '_blank');
+        }
+        setIsConnecting(false);
+        return;
+      }
+
+      console.log('🔵 [DEBUG] Getting provider for:', walletConfig.name);
+      const provider = walletConfig.getProvider();
+      if (!provider) {
+        throw new Error(`${walletConfig.name} provider not available`);
+      }
       console.log('🔵 [DEBUG] Provider obtained:', !!provider);
       
       // Request account access first
@@ -1171,11 +1190,157 @@ function App() {
             )}
           </div>
         ) : (
-          <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
+          <button onClick={openWalletModal} className="connect-button" disabled={isConnecting}>
             {isConnecting ? "Connecting..." : "Connect Wallet"}
-        </button>
+          </button>
         )}
       </div>
+      
+      {/* Wallet Selection Modal */}
+      {showWalletModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(8px)'
+          }}
+          onClick={() => setShowWalletModal(false)}
+        >
+          <div 
+            style={{
+              background: 'linear-gradient(135deg, #1a1a1a, #0d0d0d)',
+              borderRadius: '20px',
+              padding: '2rem',
+              maxWidth: '480px',
+              width: '90%',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 24px 80px rgba(0, 0, 0, 0.8)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{ 
+                margin: 0,
+                color: '#ffffff',
+                fontSize: '1.5rem',
+                fontWeight: 700
+              }}>
+                Select Wallet
+              </h2>
+              <button
+                onClick={() => setShowWalletModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  lineHeight: 1,
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.6)'}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {SUPPORTED_WALLETS.map((wallet) => {
+                const isInstalled = wallet.checkInstalled();
+                return (
+                  <button
+                    key={wallet.id}
+                    onClick={() => isInstalled ? connectWallet(wallet) : window.open(wallet.downloadUrl, '_blank')}
+                    disabled={isConnecting}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '1.125rem 1.5rem',
+                      background: '#1e1e1e',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      borderRadius: '14px',
+                      color: '#ffffff',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      cursor: isConnecting ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.25s ease',
+                      opacity: isConnecting ? 0.5 : 1
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isConnecting) {
+                        e.currentTarget.style.background = '#252525';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#1e1e1e';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ letterSpacing: '0.01em' }}>{wallet.name}</span>
+                    </div>
+                    {isInstalled ? (
+                      <span style={{ 
+                        fontSize: '0.7rem',
+                        color: '#4ade80',
+                        fontWeight: 700,
+                        background: 'rgba(74, 222, 128, 0.15)',
+                        padding: '0.35rem 0.7rem',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Installed
+                      </span>
+                    ) : (
+                      <span style={{ 
+                        fontSize: '0.75rem',
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        fontWeight: 600,
+                        letterSpacing: '0.02em'
+                      }}>
+                        Install →
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <p style={{
+              marginTop: '1.75rem',
+              marginBottom: 0,
+              fontSize: '0.8rem',
+              color: 'rgba(255, 255, 255, 0.35)',
+              textAlign: 'center',
+              lineHeight: '1.5'
+            }}>
+              Don't have a wallet? Click on any wallet above to download.
+            </p>
+          </div>
+        </div>
+      )}
       
       <div className="info">
         <p>📍 Network: Sepolia Testnet</p>
