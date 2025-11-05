@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ethers, type Eip1193Provider } from 'ethers';
 import { createInstance } from '@zama-fhe/relayer-sdk/web';
 
-// Type declarations for WASM modules
+// Type declarations for WASM modules and wallet providers
 declare global {
   interface Window {
     TFHE?: {
@@ -13,6 +13,11 @@ declare global {
       default: () => Promise<void>;
       [key: string]: any;
     };
+    // Wallet providers
+    ethereum?: Eip1193Provider & { isMetaMask?: boolean; isCoinbaseWallet?: boolean };
+    okxwallet?: Eip1193Provider & { isOkxWallet?: boolean };
+    coinbaseWalletExtension?: Eip1193Provider;
+    trustwallet?: Eip1193Provider;
   }
 }
 
@@ -80,39 +85,87 @@ const CONTRACT_ABI = [
 const SEPOLIA_CHAIN_ID = 11155111;
 
 /**
- * Robustly polls for the window.ethereum provider object.
+ * Detects and returns available wallet providers.
+ * Supports MetaMask, OKX Wallet, Coinbase Wallet, Trust Wallet, and other EIP-1193 compatible wallets.
+ * @returns {Eip1193Provider | null} The detected wallet provider or null if none found.
+ */
+const detectWalletProvider = (): Eip1193Provider | null => {
+  // Priority order: OKX Wallet > MetaMask > Coinbase > Trust Wallet > Generic ethereum
+  
+  // Check for OKX Wallet first
+  if (window.okxwallet) {
+    console.log('🟠 Detected OKX Wallet');
+    return window.okxwallet as Eip1193Provider;
+  }
+  
+  // Check for MetaMask
+  if (window.ethereum?.isMetaMask) {
+    console.log('🦊 Detected MetaMask');
+    return window.ethereum as Eip1193Provider;
+  }
+  
+  // Check for Coinbase Wallet
+  if (window.ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension) {
+    console.log('🔵 Detected Coinbase Wallet');
+    return (window.coinbaseWalletExtension || window.ethereum) as Eip1193Provider;
+  }
+  
+  // Check for Trust Wallet
+  if (window.trustwallet) {
+    console.log('💙 Detected Trust Wallet');
+    return window.trustwallet as Eip1193Provider;
+  }
+  
+  // Fallback to generic ethereum provider
+  if (window.ethereum) {
+    console.log('🔗 Detected generic Web3 wallet');
+    return window.ethereum as Eip1193Provider;
+  }
+  
+  return null;
+};
+
+/**
+ * Robustly polls for wallet provider objects.
  * This is the standard (EIP-1193) interface injected by browser wallets like MetaMask, OKX Wallet, etc.
  * This polling is necessary to handle race conditions where the app loads before the wallet extension is ready.
  * @param {number} timeout - The maximum time to wait for the provider in milliseconds.
- * @param {number} interval - The interval between checks in milliseconds.
  * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
  */
 const getWalletProvider = (timeout = 7000): Promise<Eip1193Provider> => {
   return new Promise((resolve, reject) => {
     // Check if provider is already available
-    if (window.ethereum) {
-      return resolve(window.ethereum as Eip1193Provider);
+    const provider = detectWalletProvider();
+    if (provider) {
+      return resolve(provider);
     }
 
-    const onInitialize = () => {
-      // The event fired, so we can clear the timeout and resolve.
-      clearTimeout(timeoutId);
-      resolve(window.ethereum as Eip1193Provider);
+    const checkProvider = () => {
+      const provider = detectWalletProvider();
+      if (provider) {
+        clearTimeout(timeoutId);
+        window.removeEventListener('ethereum#initialized', onInitialize);
+        resolve(provider);
+      }
     };
 
-    // Listen for the modern wallet event.
+    const onInitialize = () => {
+      checkProvider();
+    };
+
+    // Listen for wallet initialization events
     window.addEventListener('ethereum#initialized', onInitialize, { once: true });
 
     // Set a timeout as a fallback.
     const timeoutId = setTimeout(() => {
-      // The timeout fired, so we should remove the event listener.
       window.removeEventListener('ethereum#initialized', onInitialize);
       
       // Do one last check before rejecting.
-      if (window.ethereum) {
-        resolve(window.ethereum as Eip1193Provider);
+      const provider = detectWalletProvider();
+      if (provider) {
+        resolve(provider);
       } else {
-        reject(new Error("Wallet provider not found after " + timeout + "ms. The wallet extension may be disabled or slow to load."));
+        reject(new Error("No wallet provider found after " + timeout + "ms. Please install MetaMask, OKX Wallet, or another Web3 wallet."));
       }
     }, timeout);
   });
@@ -149,12 +202,14 @@ function App() {
 
   // Listen for wallet account and network changes
   useEffect(() => {
-    if (!window.ethereum) return;
+    // Get the active wallet provider
+    const walletProvider = detectWalletProvider();
+    if (!walletProvider) return;
 
     const handleAccountsChanged = async (accounts: string[]) => {
       console.log('Accounts changed:', accounts);
       if (accounts.length === 0) {
-        // User disconnected wallet in MetaMask
+        // User disconnected wallet
         providerRef.current = null;
         signerRef.current = null;
         setAccount(null);
@@ -164,8 +219,9 @@ function App() {
       } else if (accounts[0] !== account) {
         // User switched account or reconnected
         // Recreate provider if it doesn't exist
-        if (!providerRef.current && window.ethereum) {
-          providerRef.current = new ethers.BrowserProvider(window.ethereum);
+        const currentProvider = detectWalletProvider();
+        if (!providerRef.current && currentProvider) {
+          providerRef.current = new ethers.BrowserProvider(currentProvider);
         }
         if (providerRef.current) {
           try {
@@ -190,8 +246,8 @@ function App() {
     };
 
     const handleDisconnect = () => {
-      // MetaMask disconnect event (if supported)
-      console.log('MetaMask disconnected');
+      // Wallet disconnect event (if supported)
+      console.log('Wallet disconnected');
       providerRef.current = null;
       signerRef.current = null;
       setAccount(null);
@@ -200,32 +256,37 @@ function App() {
       setAge('');
     };
 
-    // Listen for events
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-      
-      // Some versions of MetaMask support disconnect event
-      try {
-        if ('on' in window.ethereum && typeof window.ethereum.on === 'function') {
-          window.ethereum.on('disconnect', handleDisconnect);
+    // Listen for events on the detected wallet provider
+    try {
+      if ('on' in walletProvider && typeof walletProvider.on === 'function') {
+        walletProvider.on('accountsChanged', handleAccountsChanged);
+        walletProvider.on('chainChanged', handleChainChanged);
+        
+        // Some wallets support disconnect event
+        try {
+          walletProvider.on('disconnect', handleDisconnect);
+        } catch (e) {
+          // disconnect event may not be supported, ignore error
         }
-      } catch (e) {
-        // disconnect event may not be supported, ignore error
       }
+    } catch (e) {
+      console.error('Error setting up wallet event listeners:', e);
     }
 
     // Periodic connection status check (as fallback)
     const checkConnection = async () => {
-      if (account && providerRef.current && window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-          if (accounts.length === 0) {
-            // No connected accounts, clear state
-            handleAccountsChanged([]);
+      if (account && providerRef.current) {
+        const currentProvider = detectWalletProvider();
+        if (currentProvider) {
+          try {
+            const accounts = await currentProvider.request({ method: 'eth_accounts' });
+            if (accounts.length === 0) {
+              // No connected accounts, clear state
+              handleAccountsChanged([]);
+            }
+          } catch (e) {
+            console.error('Error checking connection:', e);
           }
-        } catch (e) {
-          console.error('Error checking connection:', e);
         }
       }
     };
@@ -233,14 +294,19 @@ function App() {
     const intervalId = setInterval(checkConnection, 2000); // Check every 2 seconds
 
     return () => {
-      if (window.ethereum && window.ethereum.removeListener) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
-        try {
-          window.ethereum.removeListener('disconnect', handleDisconnect);
-        } catch (e) {
-          // Ignore
+      // Clean up event listeners
+      try {
+        if ('removeListener' in walletProvider && typeof walletProvider.removeListener === 'function') {
+          walletProvider.removeListener('accountsChanged', handleAccountsChanged);
+          walletProvider.removeListener('chainChanged', handleChainChanged);
+          try {
+            walletProvider.removeListener('disconnect', handleDisconnect);
+          } catch (e) {
+            // Ignore
+          }
         }
+      } catch (e) {
+        console.error('Error removing wallet event listeners:', e);
       }
       clearInterval(intervalId);
     };
@@ -341,7 +407,11 @@ function App() {
 
   const connectWallet = async () => {
     console.log('🔵 [DEBUG] connectWallet called');
-    console.log('🔵 [DEBUG] window.ethereum exists?', typeof window.ethereum !== 'undefined');
+    console.log('🔵 [DEBUG] Checking available wallets...');
+    console.log('🔵 [DEBUG] window.ethereum:', typeof window.ethereum !== 'undefined');
+    console.log('🔵 [DEBUG] window.okxwallet:', typeof window.okxwallet !== 'undefined');
+    console.log('🔵 [DEBUG] window.coinbaseWalletExtension:', typeof window.coinbaseWalletExtension !== 'undefined');
+    console.log('🔵 [DEBUG] window.trustwallet:', typeof window.trustwallet !== 'undefined');
     console.log('🔵 [DEBUG] Current isConnecting:', isConnecting);
     
     setIsConnecting(true); // Set loading state immediately on click
@@ -450,27 +520,8 @@ function App() {
       
     } catch (error: any) {
       console.error("Failed to connect wallet:", error);
-      
-      // Provide more helpful error messages based on the error type
-      let errorMessage = error.message || "Failed to connect wallet.";
-      
-      if (error.message && error.message.includes("Wallet provider not found")) {
-        errorMessage = "🦊 No wallet detected! Please install MetaMask or another Web3 wallet extension to continue.";
-        
-        // Add a clickable link in the error message
-        setTimeout(() => {
-          const confirmed = window.confirm(
-            "MetaMask wallet extension not detected.\n\n" +
-            "Would you like to install MetaMask now?\n\n" +
-            "(You will be redirected to metamask.io)"
-          );
-          if (confirmed) {
-            window.open("https://metamask.io/download/", "_blank");
-          }
-        }, 100);
-      }
-      
-      setError(errorMessage);
+      // Replace the alert with a console.warn or a less intrusive UI notification
+      setError(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
     } finally {
       setIsConnecting(false); // Always turn off loading state at the end
     }
@@ -500,15 +551,14 @@ function App() {
       setError(null);
       setAge('');
       
-      // Note: MetaMask's connection state is managed by MetaMask itself
-      // Frontend cannot directly "disconnect" MetaMask's connection
-      // User needs to manually disconnect in MetaMask or switch accounts
+      // Note: Wallet connection state is managed by the wallet extension itself
+      // Frontend cannot directly "disconnect" the wallet's connection
+      // User needs to manually disconnect in their wallet extension
       // We can only clear local connection state so frontend won't show "Connected"
       
-      // Try to request empty accounts list (though MetaMask may still keep permission)
-      if (window.ethereum && 'removeListener' in window.ethereum) {
-        // MetaMask will keep permission, but our frontend state is cleared
-        console.log('Wallet disconnected from frontend. User can manually disconnect in MetaMask.');
+      const walletProvider = detectWalletProvider();
+      if (walletProvider) {
+        console.log('Wallet disconnected from frontend. User can manually disconnect in their wallet extension.');
       }
     } catch (e) {
       console.error('Error disconnecting wallet:', e);
@@ -1114,40 +1164,9 @@ function App() {
             )}
           </div>
         ) : (
-          <>
-            <div style={{
-              padding: '1rem',
-              marginBottom: '1rem',
-              background: 'rgba(255, 193, 7, 0.1)',
-              border: '2px solid rgba(255, 193, 7, 0.3)',
-              borderRadius: '8px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: '0.9rem',
-              lineHeight: '1.5'
-            }}>
-              <strong>📢 Note:</strong> You need a Web3 wallet (like MetaMask) to use this app.
-              {!window.ethereum && (
-                <>
-                  <br />
-                  <a 
-                    href="https://metamask.io/download/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{
-                      color: '#ffa726',
-                      textDecoration: 'underline',
-                      fontWeight: 600
-                    }}
-                  >
-                    Click here to install MetaMask
-                  </a>
-                </>
-              )}
-            </div>
-            <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
-              {isConnecting ? "Connecting..." : "Connect Wallet"}
-            </button>
-          </>
+          <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
+            {isConnecting ? "Connecting..." : "Connect Wallet"}
+        </button>
         )}
       </div>
       
