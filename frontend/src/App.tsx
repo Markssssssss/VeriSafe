@@ -87,20 +87,50 @@ const SEPOLIA_CHAIN_ID = 11155111;
  * @param {number} interval - The interval between checks in milliseconds.
  * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
  */
-const getWalletProvider = (timeout = 7000, interval = 200): Promise<Eip1193Provider> => {
+const getWalletProvider = (timeout = 7000): Promise<Eip1193Provider> => {
   return new Promise((resolve, reject) => {
-    let elapsed = 0;
-    const check = () => {
+    // Check if provider is already available
+    if (window.ethereum) {
+      return resolve(window.ethereum as Eip1193Provider);
+    }
+
+    // Set a timeout to reject the promise if the event isn't fired
+    const timeoutId = setTimeout(() => {
+      // Before rejecting, do one last check in case the event fired just before the timeout was set
       if (window.ethereum) {
         resolve(window.ethereum as Eip1193Provider);
-      } else if (elapsed < timeout) {
-        elapsed += interval;
-        setTimeout(check, interval);
       } else {
-        reject(new Error("Wallet provider not found. Please install a compatible wallet extension."));
+        reject(new Error("Wallet provider not found after " + timeout + "ms. The wallet extension may be disabled or slow to load."));
       }
+    }, timeout);
+
+    // Modern wallets fire an 'ethereum#initialized' event once they're ready.
+    // This is more reliable than polling.
+    const onInitialize = () => {
+      clearTimeout(timeoutId); // Clear the timeout since we found the provider
+      resolve(window.ethereum as Eip1193Provider);
     };
-    check();
+    
+    window.addEventListener('ethereum#initialized', onInitialize, { once: true });
+
+    // Cleanup the event listener if the component unmounts or the promise is rejected
+    // This is good practice but may not be strictly necessary with { once: true }
+    const cleanup = () => {
+      window.removeEventListener('ethereum#initialized', onInitialize);
+      clearTimeout(timeoutId);
+    };
+
+    // This is a slightly more complex way to handle cleanup for a promise
+    // that might be garbage collected if the calling component unmounts.
+    // For our case, it's a reasonable safeguard.
+    const promise = new Promise<Eip1193Provider>((res, rej) => {
+        const originalResolve = resolve;
+        const originalReject = reject;
+        resolve = (value) => { cleanup(); originalResolve(value); };
+        reject = (reason) => { cleanup(); originalReject(reason); };
+    });
+    
+    return promise;
   });
 };
 
