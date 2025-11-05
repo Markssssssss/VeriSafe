@@ -450,8 +450,27 @@ function App() {
       
     } catch (error: any) {
       console.error("Failed to connect wallet:", error);
-      // Replace the alert with a console.warn or a less intrusive UI notification
-      setError(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
+      
+      // Provide more helpful error messages based on the error type
+      let errorMessage = error.message || "Failed to connect wallet.";
+      
+      if (error.message && error.message.includes("Wallet provider not found")) {
+        errorMessage = "🦊 No wallet detected! Please install MetaMask or another Web3 wallet extension to continue.";
+        
+        // Add a clickable link in the error message
+        setTimeout(() => {
+          const confirmed = window.confirm(
+            "MetaMask wallet extension not detected.\n\n" +
+            "Would you like to install MetaMask now?\n\n" +
+            "(You will be redirected to metamask.io)"
+          );
+          if (confirmed) {
+            window.open("https://metamask.io/download/", "_blank");
+          }
+        }, 100);
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsConnecting(false); // Always turn off loading state at the end
     }
@@ -1095,9 +1114,40 @@ function App() {
             )}
           </div>
         ) : (
-          <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
-            {isConnecting ? "Connecting..." : "Connect Wallet"}
-        </button>
+          <>
+            <div style={{
+              padding: '1rem',
+              marginBottom: '1rem',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '2px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '8px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '0.9rem',
+              lineHeight: '1.5'
+            }}>
+              <strong>📢 Note:</strong> You need a Web3 wallet (like MetaMask) to use this app.
+              {!window.ethereum && (
+                <>
+                  <br />
+                  <a 
+                    href="https://metamask.io/download/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{
+                      color: '#ffa726',
+                      textDecoration: 'underline',
+                      fontWeight: 600
+                    }}
+                  >
+                    Click here to install MetaMask
+                  </a>
+                </>
+              )}
+            </div>
+            <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
+              {isConnecting ? "Connecting..." : "Connect Wallet"}
+            </button>
+          </>
         )}
       </div>
       
