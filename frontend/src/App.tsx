@@ -248,8 +248,8 @@ function App() {
     };
   }, [account]);
 
-  // Check wallet connection status when entering main page
-  // Only check if user hasn't manually disconnected
+  // Check wallet connection status when entering main page - REMOVED TO PREVENT RACE CONDITION
+  /*
   useEffect(() => {
     // Don't use early return - always execute the effect to maintain Hook order
     if (view === 'main' && !userDisconnected) {
@@ -339,6 +339,7 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
+  */
 
   const connectWallet = async () => {
     setIsConnecting(true); // Set loading state immediately on click
