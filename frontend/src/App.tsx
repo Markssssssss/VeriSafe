@@ -326,6 +326,9 @@ function App() {
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
 
   const connectWallet = async () => {
+    setLoading(true); // Set loading state immediately on click
+    setError(null); // Clear previous errors
+
     try {
       // Robustly get the provider
       const provider = await getWalletProvider();
@@ -429,6 +432,8 @@ function App() {
       console.error("Failed to connect wallet:", error);
       // Replace the alert with a console.warn or a less intrusive UI notification
       setError(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
+    } finally {
+      setLoading(false); // Always turn off loading state at the end
     }
   };
 
@@ -1070,8 +1075,8 @@ function App() {
             )}
           </div>
         ) : (
-          <button onClick={connectWallet} className="connect-button">
-            Connect Wallet
+          <button onClick={connectWallet} className="connect-button" disabled={loading}>
+            {loading ? "Connecting..." : "Connect Wallet"}
         </button>
         )}
       </div>
