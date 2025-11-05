@@ -13,12 +13,18 @@ declare global {
       default: () => Promise<void>;
       [key: string]: any;
     };
-    // Wallet providers
-    ethereum?: Eip1193Provider & { isMetaMask?: boolean; isCoinbaseWallet?: boolean };
-    okxwallet?: Eip1193Provider & { isOkxWallet?: boolean };
-    coinbaseWalletExtension?: Eip1193Provider;
-    trustwallet?: Eip1193Provider;
+    // Additional wallet providers (ethereum is already defined by ethers)
+    okxwallet?: any;
+    coinbaseWalletExtension?: any;
+    trustwallet?: any;
   }
+}
+
+// Extended provider interface for wallet detection
+interface ExtendedProvider extends Eip1193Provider {
+  isMetaMask?: boolean;
+  isCoinbaseWallet?: boolean;
+  isOkxWallet?: boolean;
 }
 
 // Complete SepoliaConfig with all required fields (not using SDK's incomplete config)
@@ -99,15 +105,16 @@ const detectWalletProvider = (): Eip1193Provider | null => {
   }
   
   // Check for MetaMask
-  if (window.ethereum?.isMetaMask) {
+  const ethereum = window.ethereum as ExtendedProvider | undefined;
+  if (ethereum?.isMetaMask) {
     console.log('🦊 Detected MetaMask');
-    return window.ethereum as Eip1193Provider;
+    return ethereum as Eip1193Provider;
   }
   
   // Check for Coinbase Wallet
-  if (window.ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension) {
+  if (ethereum?.isCoinbaseWallet || window.coinbaseWalletExtension) {
     console.log('🔵 Detected Coinbase Wallet');
-    return (window.coinbaseWalletExtension || window.ethereum) as Eip1193Provider;
+    return (window.coinbaseWalletExtension || ethereum) as Eip1193Provider;
   }
   
   // Check for Trust Wallet
