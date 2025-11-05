@@ -117,7 +117,8 @@ function App() {
   const [account, setAccount] = useState<string | null>(null);
   const [age, setAge] = useState<string>('');
   const [result, setResult] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string | null>(null); // Copy success indicator
   const [userDisconnected, setUserDisconnected] = useState<boolean>(false); // Track if user manually disconnected
@@ -326,7 +327,7 @@ function App() {
   }, [view, userDisconnected]); // Depend on userDisconnected to prevent auto-connection
 
   const connectWallet = async () => {
-    setLoading(true); // Set loading state immediately on click
+    setIsConnecting(true); // Set loading state immediately on click
     setError(null); // Clear previous errors
 
     try {
@@ -433,7 +434,7 @@ function App() {
       // Replace the alert with a console.warn or a less intrusive UI notification
       setError(error.message || "Failed to connect wallet. Please ensure you have a wallet extension installed and enabled.");
     } finally {
-      setLoading(false); // Always turn off loading state at the end
+      setIsConnecting(false); // Always turn off loading state at the end
     }
   };
 
@@ -499,7 +500,7 @@ function App() {
       if (initializingRef.current) {
         console.log("Already initializing, waiting...");
         setError("FHEVM is currently initializing, please wait...");
-        setLoading(false);
+        setIsVerifying(false);
         return;
       }
       
@@ -537,7 +538,7 @@ function App() {
         console.error("Failed to reinitialize FHEVM:", reinitError);
         console.error("Error details:", reinitError.message, reinitError.stack);
         setError("FHEVM initialization failed: " + reinitError.message);
-        setLoading(false);
+        setIsVerifying(false);
         alert("FHEVM initialization failed: " + reinitError.message + "\n\nPlease refresh the page.");
         return;
       } finally {
@@ -557,7 +558,7 @@ function App() {
       return;
     }
 
-    setLoading(true);
+    setIsVerifying(true);
     setResult(null);
     setError(null);
 
@@ -626,7 +627,7 @@ function App() {
       console.log("⚠️ Please check MetaMask popup window to confirm the transaction!");
       
       // Show a loading state that indicates waiting for MetaMask
-      setLoading(true);
+      setIsVerifying(true);
       setError(null);
       
       const tx = await contract.verifyAge(handleBytes32, inputProof);
@@ -852,7 +853,7 @@ function App() {
       }
       // Don't set result on error
     } finally {
-      setLoading(false);
+      setIsVerifying(false);
     }
   };
 
@@ -917,7 +918,8 @@ function App() {
   const resetToIntro = () => {
     setAge('');
     setResult(null);
-    setLoading(false);
+    setIsConnecting(false);
+    setIsVerifying(false);
     setError(null);
     setCopySuccess(null);
     setView('home');
@@ -1052,14 +1054,14 @@ function App() {
                 placeholder="Enter age (1-150)" 
                 min="1"
                 max="150"
-                disabled={loading}
+                disabled={isVerifying}
               />
               <button 
                 onClick={verifyAge} 
-                disabled={loading || !age}
+                disabled={isVerifying || !age}
                 className="verify-button"
               >
-                {loading ? "Verifying..." : "Verify Age"}
+                {isVerifying ? "Verifying..." : "Verify Age"}
               </button>
             </div>
             
@@ -1075,8 +1077,8 @@ function App() {
             )}
           </div>
         ) : (
-          <button onClick={connectWallet} className="connect-button" disabled={loading}>
-            {loading ? "Connecting..." : "Connect Wallet"}
+          <button onClick={connectWallet} className="connect-button" disabled={isConnecting}>
+            {isConnecting ? "Connecting..." : "Connect Wallet"}
         </button>
         )}
       </div>
