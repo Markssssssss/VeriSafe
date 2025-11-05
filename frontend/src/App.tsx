@@ -340,12 +340,18 @@ function App() {
   */
 
   const connectWallet = async () => {
+    console.log('🔵 [DEBUG] connectWallet called');
+    console.log('🔵 [DEBUG] window.ethereum exists?', typeof window.ethereum !== 'undefined');
+    console.log('🔵 [DEBUG] Current isConnecting:', isConnecting);
+    
     setIsConnecting(true); // Set loading state immediately on click
     setError(null); // Clear previous errors
 
     try {
+      console.log('🔵 [DEBUG] Calling getWalletProvider...');
       // Robustly get the provider
       const provider = await getWalletProvider();
+      console.log('🔵 [DEBUG] Provider obtained:', !!provider);
       
       // Request account access first
       await provider.request({ method: 'eth_requestAccounts' });
