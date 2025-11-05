@@ -87,7 +87,7 @@ const SEPOLIA_CHAIN_ID = 11155111;
  * @param {number} interval - The interval between checks in milliseconds.
  * @returns {Promise<Eip1193Provider>} A promise that resolves with the provider object or rejects if not found.
  */
-const getWalletProvider = (timeout = 3000, interval = 200): Promise<Eip1193Provider> => {
+const getWalletProvider = (timeout = 7000, interval = 200): Promise<Eip1193Provider> => {
   return new Promise((resolve, reject) => {
     let elapsed = 0;
     const check = () => {
